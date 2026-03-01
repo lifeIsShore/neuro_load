@@ -103,4 +103,20 @@ class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
       (delete(sessions)..where((s) => s.id.equals(id))).go();
 
   Future<void> deleteAll() => delete(sessions).go();
+
+  /// Returns the most recent session that was started but never finished.
+  /// Used for zombie session recovery on app launch.
+  Future<Session?> findIncomplete() =>
+      (select(sessions)
+            ..where((s) => s.isCompleted.equals(false))
+            ..orderBy([(s) => OrderingTerm.desc(s.startedAt)])
+            ..limit(1))
+          .getSingleOrNull();
+
+  /// Marks an incomplete session as abandoned (sets isCompleted to true with
+  /// a 0-second elapsed so it appears in history but is clearly incomplete).
+  Future<void> abandonSession(int id) =>
+      (update(sessions)..where((s) => s.id.equals(id))).write(
+        const SessionsCompanion(isCompleted: Value(true)),
+      );
 }

@@ -48,6 +48,12 @@ dependencies:
   # Export / Share
   share_plus: ^10.0.2
 
+  # Timezone support (for scheduled daily notifications)
+  flutter_timezone: ^1.0.8
+
+  # HTTP client (for Supabase REST upsert)
+  http: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

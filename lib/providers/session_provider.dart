@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/app_database.dart';
 import '../data/database_providers.dart';
+import '../services/notification_service.dart';
 
 // ── Primary Category ─────────────────────────────────────────────────────────
 
@@ -205,11 +206,36 @@ class SessionNotifier extends StateNotifier<SessionState> {
     }
   }
 
+  /// Tick counter — used to throttle the persistent notification updates.
+  int _tickCount = 0;
+
   void tick() {
     if (state.phase == SessionPhase.active) {
       state =
           state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1));
+      // Update the persistent notification every 60 seconds to save battery.
+      _tickCount++;
+      if (_tickCount % 60 == 0) {
+        NotificationService.showSessionActive(
+          category: state.category?.label ?? 'Focus',
+          elapsed: state.elapsed,
+        );
+      }
     }
+  }
+
+  /// Re-attach this notifier to an existing DB session after a zombie recovery.
+  /// The session is put into [SessionPhase.active] with the zombie's start time
+  /// so the elapsed timer resumes from the correct offset.
+  void resumeZombieSession(dynamic zombie) {
+    final now = DateTime.now();
+    final elapsed = now.difference(zombie.startedAt as DateTime);
+    state = SessionState(
+      phase: SessionPhase.active,
+      startTime: zombie.startedAt as DateTime,
+      elapsed: elapsed,
+      dbSessionId: zombie.dbSessionId as int,
+    );
   }
 
   void addLap({required DistractionTrigger trigger, String? note}) {
@@ -234,6 +260,10 @@ class SessionNotifier extends StateNotifier<SessionState> {
       phase: SessionPhase.complete,
       endTime: now,
     );
+
+    // Dismiss the persistent notification.
+    await NotificationService.dismissSessionNotification();
+    _tickCount = 0;
 
     // Persist finish + laps to DB
     final dbId = state.dbSessionId;
@@ -270,7 +300,11 @@ class SessionNotifier extends StateNotifier<SessionState> {
     }
   }
 
-  void resetSession() => state = const SessionState();
+  void resetSession() {
+    NotificationService.dismissSessionNotification();
+    _tickCount = 0;
+    state = const SessionState();
+  }
 }
 
 final sessionProvider = StateNotifierProvider<SessionNotifier, SessionState>(

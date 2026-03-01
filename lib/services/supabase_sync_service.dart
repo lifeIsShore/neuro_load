@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/app_database.dart';
@@ -114,12 +116,27 @@ class SupabaseSyncService {
     String table,
     Map<String, dynamic> data,
   ) async {
-    // POST to Supabase REST API with upsert (on_conflict=id)
-    // Endpoint: ${cfg.projectUrl}/rest/v1/$table?on_conflict=id
-    // In production, swap this for the Supabase SDK client.upsert() call
-    debugPrint('[Supabase] upsert $table id=${data['id']}');
-    // Actual HTTP call would go here — intentionally stubbed until the user
-    // configures their Supabase credentials in settings.
+    final uri = Uri.parse('${cfg.projectUrl}/rest/v1/$table');
+    final response = await http.post(
+      uri,
+      headers: {
+        'apikey': cfg.anonKey,
+        'Authorization': 'Bearer ${cfg.anonKey}',
+        'Content-Type': 'application/json',
+        // Upsert: insert or update on conflict with the primary key
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode >= 400) {
+      throw Exception(
+        'Supabase upsert failed [$table id=${data['id']}] '
+        '${response.statusCode}: ${response.body}',
+      );
+    }
+
+    debugPrint('[Supabase] ✓ upserted $table id=${data['id']}');
   }
 }
 

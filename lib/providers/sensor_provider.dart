@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
+import '../data/database_providers.dart';
+
 // ── Face-Down Sensor Service ─────────────────────────────────────────────────
 
 /// Watches the accelerometer. Emits `true` when the device is face-down
@@ -80,10 +82,16 @@ class ZombieSession {
 }
 
 /// Provides a ZombieSession if there's an orphaned incomplete session
-/// from a previous launch.
+/// from a previous launch (app was force-quit or crashed mid-session).
 final zombieSessionProvider = FutureProvider<ZombieSession?>((ref) async {
-  // Import lazily to avoid circular dependency
-  return null; // Populated after DB wiring in app_database extension
+  final dao = ref.read(sessionDaoProvider);
+  final incomplete = await dao.findIncomplete();
+  if (incomplete == null) return null;
+  return ZombieSession(
+    dbSessionId: incomplete.id,
+    startedAt: DateTime.fromMillisecondsSinceEpoch(incomplete.startedAt),
+    category: incomplete.category,
+  );
 });
 
 // ── Zombie Recovery Widget ────────────────────────────────────────────────────

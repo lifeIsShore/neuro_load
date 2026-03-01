@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
 
 // ── Notification Service ─────────────────────────────────────────────────────
 
@@ -11,6 +14,11 @@ class NotificationService {
 
   static Future<void> initialize() async {
     if (_initialized) return;
+
+    // Initialize timezone database + local zone
+    tz.initializeTimeZones();
+    final localTz = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(localTz));
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
@@ -98,14 +106,35 @@ class NotificationService {
 
   // ── Daily Reminder ───────────────────────────────────────────────────────────
 
+  /// Schedules a daily notification at the exact [time] chosen by the user.
+  /// Uses [tz.TZDateTime] + [DateTimeComponents.time] for timezone-correct
+  /// daily recurrence (unlike periodicallyShow which ignores the time param).
   static Future<void> scheduleDailyReminder({
     required TimeOfDay time,
   }) async {
-    await _plugin.periodicallyShow(
+    // Cancel any previous reminder before scheduling a new one.
+    await cancelDailyReminder();
+
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
+    );
+
+    // If the chosen time has already passed today, start from tomorrow.
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+
+    await _plugin.zonedSchedule(
       2,
       'Time to Train 🧠',
       'Your focus gym is waiting.',
-      RepeatInterval.daily,
+      scheduled,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'reminders',
@@ -115,6 +144,9 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time, // repeats daily
+      payload: 'daily_reminder',
     );
   }
 
