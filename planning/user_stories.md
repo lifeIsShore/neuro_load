@@ -943,3 +943,60 @@ Phase 7: Cloud Sync (optional Supabase)
  RLS policies for user data
  Async sync of sessions/laps to Supabase
  Opt-in toggle in Settings
+
+
+
+ 🔴 Priority 1 — Must-Do Before Shipping
+Item	Where	What it needs
+Run flutter pub get	Terminal	Required for new flutter_timezone + http packages
+Settings → Wipe All Data	
+
+settings_screen.dart
+ line 188	// TODO: implement full DB teardown — needs dao.deleteAll() call
+Settings → Export Data	
+
+settings_screen.dart
+ line 81	onTap: () {} — needs to call ExportService (already written in 
+
+export_service.dart
+)
+Settings → Reminder Time	
+
+settings_screen.dart
+No time-picker UI at all — needed for 
+
+scheduleDailyReminder(time:)
+ to be called
+Settings → Cloud Sync credentials	
+
+settings_screen.dart
+Toggle exists but no URL/key input form for Supabase
+🟡 Priority 2 — Polish & UX
+Item	Where	What it needs
+Face-down auto-start	
+
+timer_screen.dart
+faceDownStartProvider is defined but never ref.listen'd in the timer/setup screen
+/timer route guard	
+
+router.dart
+Nothing stops a user navigating to /timer with no active session — would show a blank/broken state
+Paywall screen	
+
+paywall_screen.dart
+Exists as a file but the "Upgrade" button in Settings is a no-op
+Settings toggles → persisted	settingsProvider	Currently in-memory only (lost on restart) — should save to 
+
+AppSettings
+ DB table
+🟢 Priority 3 — Optional / Nice-to-Have
+Item	Detail
+App icon + splash	Default Flutter icon still showing
+Android SCHEDULE_EXACT_ALARM permission	Required on Android 12+ for zonedSchedule with exactAllowWhileIdle
+/timer → /summary route guard on back-press	Currently allows back-navigation out of an active session
+
+ "Priority 1 & 2":
+
+Run flutter pub get and flutter test on your end.
+We finish wiring the Settings Screen (Wipe Data, Export Data, Reminder Time, Supabase credentials).
+We connect the Face-down auto-start sensor to the setup screen.
