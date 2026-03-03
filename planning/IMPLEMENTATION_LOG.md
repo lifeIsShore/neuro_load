@@ -110,6 +110,27 @@
 
 ---
 
+## EPIC 9 — Phase 2, 3 & 4 (The Complete Backlog)
+*Features deferred from the MVP to focus on core functionality, mapping to Epics 11, 12, & 13 from the comprehensive PRD.*
+
+| Story | Title | Phase | Status | Notes |
+|-------|-------|-------|--------|-------|
+| US 9.1 | Invoice Generation | Phase 2 | ❌ NOT STARTED | Tax deduction receipts (Resend API template) |
+| US 9.2 | Calendar Task Import | Phase 2 | ❌ NOT STARTED | Fetch intent from Google/Apple Calendar |
+| US 9.3 | Circadian Rhythm Analysis | Phase 2 | ❌ NOT STARTED | Time-of-day heatmap for "Prime Time" detection |
+| US 9.4 | Ghost Intent Reminder | Phase 2 | ❌ NOT STARTED | Shows pre-flow intent when distracted to redirect focus |
+| US 9.5 | Next.js B2B Web Portal | Phase 3 | ❌ NOT STARTED | Organization management, aggregate analytics |
+| US 9.6 | Smart Coach ML (ARIMA) | Phase 3 | ❌ NOT STARTED | Advanced forecasting and anomaly detection |
+| US 9.7 | NeuroLoad Plus Upsell | Phase 3 | ❌ NOT STARTED | Subscription paywall for advanced analytics/sync |
+| US 9.8 | Dyslexia-Friendly Typography | Phase 3 | ❌ NOT STARTED | `OpenDyslexic` font toggle in settings |
+| US 9.9 | Screen-Reader & VoiceOver | Phase 3 | ❌ NOT STARTED | Full EAA accessibility semantics |
+| US 9.10 | The "Soundscape" Engine | Phase 4 | ❌ NOT STARTED | Binaural beats/white noise audio player |
+| US 9.11 | Study Lounges & Battles | Phase 4 | ❌ NOT STARTED | Realtime social accountability / 1v1 focus duels |
+| US 9.12 | Global Focus Leaderboards | Phase 4 | ❌ NOT STARTED | Weekly resetting ranks (The Tank, The Monk) |
+| US 9.13 | "Focus Resume" PDF Export | Phase 4 | ❌ NOT STARTED | Generates professional PDF resume of focus stats |
+
+---
+
 ## Key Technical Gaps Summary
 
 | Priority | Gap | Affected Stories |
