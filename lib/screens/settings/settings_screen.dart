@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/database_providers.dart';
+import '../../services/export_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/session_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _exporting = false;
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
@@ -54,7 +64,7 @@ class SettingsScreen extends ConsumerWidget {
 
               const SizedBox(height: 24),
 
-              // ── Privacy ──────────────────────────────────────────────────
+              // ── Privacy & Data ────────────────────────────────────────────
               _SettingsSection(title: 'PRIVACY & DATA'),
               _SettingsToggle(
                 icon: Icons.sync_outlined,
@@ -76,9 +86,18 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.download_outlined,
                 label: 'Export Data',
                 subtitle: 'Download sessions.csv & laps.csv',
-                trailing: const Icon(Icons.chevron_right,
-                    color: AppColors.textTertiary),
-                onTap: () {},
+                trailing: _exporting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.teal,
+                        ),
+                      )
+                    : const Icon(Icons.chevron_right,
+                        color: AppColors.textTertiary),
+                onTap: _exporting ? null : _triggerExport,
               ),
 
               const SizedBox(height: 24),
@@ -135,10 +154,11 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'DANGER ZONE', labelColor: AppColors.danger),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.dangerDim.withOpacity(0.2),
+                  color: AppColors.dangerDim.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: AppColors.danger.withOpacity(0.3), width: 0.5),
+                      color: AppColors.danger.withValues(alpha: 0.3),
+                      width: 0.5),
                 ),
                 child: _SettingsTile(
                   icon: Icons.delete_forever_outlined,
@@ -166,6 +186,37 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  // ── Export ────────────────────────────────────────────────────────────────
+
+  Future<void> _triggerExport() async {
+    setState(() => _exporting = true);
+    try {
+      final sessionDao = ref.read(sessionDaoProvider);
+      final lapDao = ref.read(lapDaoProvider);
+      final sessions = await sessionDao.allCompleted();
+      final laps = await lapDao.allLaps();
+      await ExportService.exportAllData(
+        sessions: sessions,
+        laps: laps,
+        sharePositionOrigin: '',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Export failed. Please try again.'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  // ── Wipe ──────────────────────────────────────────────────────────────────
+
   void _confirmWipe(BuildContext context) {
     showDialog(
       context: context,
@@ -174,7 +225,7 @@ class SettingsScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Wipe All Data?'),
         content: const Text(
-          'This permanently deletes all your sessions, laps, and settings. '
+          'This permanently deletes all sessions, laps, and settings. '
           'This action cannot be undone.',
         ),
         actions: [
@@ -185,7 +236,7 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // TODO: implement full DB teardown
+              _executeWipe();
             },
             child:
                 const Text('WIPE', style: TextStyle(color: AppColors.danger)),
@@ -193,6 +244,43 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _executeWipe() async {
+    try {
+      // 1. Wipe DB — laps first (foreign key dependency on sessions)
+      final lapDao = ref.read(lapDaoProvider);
+      final sessionDao = ref.read(sessionDaoProvider);
+      await lapDao.deleteAll();
+      await sessionDao.deleteAll();
+
+      // 2. Clear SharedPreferences (onboarding flag etc.)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // 3. Reset in-memory session state
+      ref.read(sessionProvider.notifier).resetSession();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All data wiped successfully.'),
+            backgroundColor: AppColors.teal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Wipe failed. Please try again.'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 

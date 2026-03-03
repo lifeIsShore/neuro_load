@@ -47,6 +47,10 @@ class LapDao extends DatabaseAccessor<AppDatabase> with _$LapDaoMixin {
     return total / rows.length;
   }
 
+  /// All laps across all sessions — used by ExportService for CSV dump.
+  Future<List<Lap>> allLaps() =>
+      (select(laps)..orderBy([(l) => OrderingTerm.asc(l.occurredAt)])).get();
+
   Future<void> deleteAllForSession(int sessionId) =>
       (delete(laps)..where((l) => l.sessionId.equals(sessionId))).go();
 

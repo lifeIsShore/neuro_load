@@ -56,7 +56,7 @@
 | MVP.002.003 | Distraction Trigger Breakdown | ✅ DONE | `_DistractionDoughnut` pie/donut chart via `fl_chart`; uses `triggerCountMapProvider`; handles empty state |
 | MVP.002.004 | Category-Specific Analytics Filter | ❌ NOT STARTED | No category dropdown/tab in Dashboard; all queries are unfiltered |
 | US 3.3 | Focus Density KPI | ✅ DONE | `avgFocusDensityProvider` shown as a KPI card |
-| US 3.8 | Trophy Room | 🔨 PARTIAL | Trophy Room KPI card tappable in dashboard but `onTap: () {}` is a stub — **no `/trophies` route, no screen built** |
+| US 3.8 | Trophy Room | ✅ DONE | `TrophyRoomScreen` built at `/trophies`; shows top 5 sessions by 1RM; dashboard card wired |
 | US 4.1 | Coach — Silent Week / Baseline Gate | ✅ DONE | `CoachEngine._baselineThreshold = 10`; shows "X sessions until Coach Intelligence unlocks" until threshold |
 | US 4.2 | Coach — +5% Next Aim Suggestion | ✅ DONE | `CoachEngine` generates `nextAimSuggestion` after baseline; `nextAimProvider` available |
 | US 4.3 | Coach — De-load Warning | ✅ DONE | Detects >15pt quality drop over last 3 sessions and surfaces `deloadWarning` insight |
@@ -73,8 +73,8 @@
 | MVP.003.002 | Forced Paywall After One Session | 🔨 PARTIAL | `/paywall` route exists; **no launch-check logic wired** — the session count gate (`checkPaywallEligibility()`) is not implemented; users are never redirected automatically |
 | MVP.003.003 | Stripe Checkout Integration | ❌ NOT STARTED | "Buy Now" button is a stub (`onTap: () {}`); no Supabase Edge Function created |
 | MVP.003.004 | License Status Verification | ❌ NOT STARTED | Settings shows hardcoded "FREE" status; no `isUserPaid()` function |
-| MVP.003.005 | GDPR Data Export (CSV) | 🔨 PARTIAL | Settings has "Export Data" tile wired to `onTap: () {}`; **no CSV generation or `share_plus` integration** |
-| MVP.003.006 | GDPR Delete Account (Wipe Data) | 🔨 PARTIAL | Confirmation dialog exists; **`// TODO: implement full DB teardown`** comment present; no actual DB wipe implemented |
+| MVP.003.005 | GDPR Data Export (CSV) | ✅ DONE | Settings "Export Data" runs `ExportService.exportAllData()` using `share_plus` to generate `sessions.csv` and `laps.csv` |
+| MVP.003.006 | GDPR Delete Account (Wipe Data) | ✅ DONE | Wipes DB (laps then sessions), clears `SharedPreferences`, and resets memory state when confirmed |
 
 ---
 
@@ -83,7 +83,7 @@
 | Story | Title | Status | Notes |
 |-------|-------|--------|-------|
 | US 5.1 | Local-First Data Storage (Drift) | ✅ DONE | All data stored in Drift SQLite (`app_database.dart`); sessions and laps persisted on finish |
-| US 5.3 | Data Export | 🔨 PARTIAL | See MVP.003.005 above |
+| US 5.3 | Data Export | ✅ DONE | See MVP.003.005 above |
 | US 5.4 | Cloud Sync (Opt-In, Paid) | ❌ NOT STARTED | Toggle exists in Settings UI but has no backend integration |
 | US 5.5 | Strict Privacy Toggle (Local Notes) | 🔨 PARTIAL | `localOnlyNotes` toggle exists in Settings and AppSettings state; **no sync payload logic to respect it** |
 
@@ -117,9 +117,6 @@
 | 🔴 HIGH | Paywall gate not wired to app startup | MVP.003.002, MVP.003.004 |
 | 🔴 HIGH | Stripe Checkout not integrated | MVP.003.003 |
 | 🔴 HIGH | Zombie session periodic check not running | MVP.001.012/013 |
-| 🟡 MED | CSV Export not implemented | MVP.003.005 |
-| 🟡 MED | DB Wipe logic stub only | MVP.003.006 |
-| 🟡 MED | Trophy Room screen missing | US 3.8 |
 | 🟡 MED | Category filter for Dashboard missing | MVP.002.004 |
 | 🟡 MED | Sensor calibration in onboarding is UI-only | MVP.000.003 |
 | 🟡 MED | Heatmap is daily grid, not 24-hour circular | MVP.002.001 |
@@ -145,24 +142,20 @@ The **core training loop** is production-quality:
 
 ## Recommended Next Implementation Brick
 
-### 🎯 NEXT: Trophy Room Screen
+### 🎯 NEXT: Zombie Session Periodic Check & Recovery
 
-**Why first?** It's a self-contained screen with no external dependencies (only reads existing DB data). It closes a visible gap in the Dashboard (the tappable card goes nowhere), provides immediate user value, and is a fast win (~1–2 days).
+**Why next?** Core functionality and data integrity. Since monetization (Paywall/Stripe) is being deferred until after the beta group tests, we need to ensure the core app loop is bulletproof. The zombie session check catches edge cases where the app is killed mid-session.
 
 **Prerequisites:**
-- Sessions table already stores `sessionOneRmSeconds`, `category`, `startedAt` ✅
-- Dashboard already has a tappable Trophy Room KPI card ✅
+- `resumeZombieSession()` method already exists in `SessionNotifier` ✅
+- Core session logic persists active session correctly ✅
 
 **What to build:**
-1. Add `/trophies` route in `router.dart`
-2. Create `lib/screens/trophy_room/trophy_room_screen.dart`
-3. Add DAO query: `SELECT * FROM sessions WHERE isCompleted = 1 ORDER BY sessionOneRmSeconds DESC LIMIT 5`
-4. Build a styled list with vintage-plaque card design (date, duration, category, session 1RM)
-5. Wire the Dashboard "TROPHY ROOM" card `onTap` to `context.go('/trophies')`
+1. Add a launch-time or lifecycle-hook check for parked "in-progress" sessions.
+2. Build the Recovery Modal to prompt the user to resume or discard.
+3. Wire the periodic background/foreground heartbeat if needed.
 
-**After Trophy Room, the recommended sequence is:**
-1. **Paywall gate** (MVP.003.002+004) — revenue protection
-2. **CSV Export** (MVP.003.005) — GDPR compliance
-3. **DB Wipe** (MVP.003.006) — complete the danger zone
-4. **Zombie Session periodic check** (MVP.001.012+013) — data integrity
-5. **Stripe Checkout** (MVP.003.003) — full monetization
+**After Zombie Session Check, the recommended sequence is:**
+1. **Sensor Calibration in Onboarding** (MVP.000.003) — replace UI-only stub with real sensor reads.
+2. **Category Filter for Dashboard** (MVP.002.004) — segment analytics.
+3. **Paywall gate & Stripe** — once the beta sample group test completes.
