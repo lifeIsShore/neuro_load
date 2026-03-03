@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../data/database_providers.dart';
 import '../../providers/sensor_provider.dart';
 import '../../providers/session_provider.dart';
+import 'zombie_recovery_modal.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -69,7 +70,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-                color: AppColors.silverGrayDim.withOpacity(0.3), width: 0.5),
+              color: AppColors.silverGrayDim.withOpacity(0.3),
+              width: 0.5,
+            ),
           ),
         ),
         child: BottomNavigationBar(

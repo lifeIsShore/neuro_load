@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/app_database.dart';
 import '../data/database_providers.dart';
 import '../services/notification_service.dart';
+import 'sensor_provider.dart' show ZombieSession;
 
 // ── Primary Category ─────────────────────────────────────────────────────────
 
@@ -150,8 +151,10 @@ class SessionState {
     if (elapsed.inSeconds == 0) return 0;
     const avgResilienceSeconds = 45;
     final lapPenalty = laps.length * avgResilienceSeconds;
-    return ((elapsed.inSeconds - lapPenalty) / elapsed.inSeconds * 100)
-        .clamp(0, 100);
+    return ((elapsed.inSeconds - lapPenalty) / elapsed.inSeconds * 100).clamp(
+      0,
+      100,
+    );
   }
 
   double get qualityScore {
@@ -194,9 +197,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
         category: Value(state.category?.name ?? 'study'),
         subCategory: Value(state.subCategory),
         intent: Value(state.intent),
-        baselineAimSeconds: Value(
-          state.targetDuration?.inSeconds ?? 2700,
-        ),
+        baselineAimSeconds: Value(state.targetDuration?.inSeconds ?? 2700),
       );
       final id = await dao.insertSession(companion);
       state = state.copyWith(dbSessionId: id);
@@ -211,8 +212,9 @@ class SessionNotifier extends StateNotifier<SessionState> {
 
   void tick() {
     if (state.phase == SessionPhase.active) {
-      state =
-          state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1));
+      state = state.copyWith(
+        elapsed: state.elapsed + const Duration(seconds: 1),
+      );
       // Update the persistent notification every 60 seconds to save battery.
       _tickCount++;
       if (_tickCount % 60 == 0) {
@@ -225,16 +227,21 @@ class SessionNotifier extends StateNotifier<SessionState> {
   }
 
   /// Re-attach this notifier to an existing DB session after a zombie recovery.
+  /// [zombie] is the [ZombieSession] wrapper produced by [zombieSessionProvider].
   /// The session is put into [SessionPhase.active] with the zombie's start time
   /// so the elapsed timer resumes from the correct offset.
-  void resumeZombieSession(dynamic zombie) {
-    final now = DateTime.now();
-    final elapsed = now.difference(zombie.startedAt as DateTime);
+  void resumeZombieSession(ZombieSession zombie) {
+    final elapsed = DateTime.now().difference(zombie.startedAt);
+    final category = PrimaryCategory.values.firstWhere(
+      (c) => c.name == zombie.category,
+      orElse: () => PrimaryCategory.study,
+    );
     state = SessionState(
       phase: SessionPhase.active,
-      startTime: zombie.startedAt as DateTime,
+      category: category,
+      startTime: zombie.startedAt,
       elapsed: elapsed,
-      dbSessionId: zombie.dbSessionId as int,
+      dbSessionId: zombie.dbSessionId,
     );
   }
 
@@ -256,10 +263,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
 
   Future<void> finishSession() async {
     final now = DateTime.now();
-    state = state.copyWith(
-      phase: SessionPhase.complete,
-      endTime: now,
-    );
+    state = state.copyWith(phase: SessionPhase.complete, endTime: now);
 
     // Dismiss the persistent notification.
     await NotificationService.dismissSessionNotification();
@@ -285,13 +289,15 @@ class SessionNotifier extends StateNotifier<SessionState> {
 
       if (state.laps.isNotEmpty) {
         final lapEntries = state.laps
-            .map((l) => LapsCompanion(
-                  sessionId: Value(dbId),
-                  occurredAt: Value(l.timestamp.millisecondsSinceEpoch),
-                  trigger: Value(l.trigger.name),
-                  note: Value(l.note),
-                  lapDurationSeconds: Value(l.lapDurationSeconds),
-                ))
+            .map(
+              (l) => LapsCompanion(
+                sessionId: Value(dbId),
+                occurredAt: Value(l.timestamp.millisecondsSinceEpoch),
+                trigger: Value(l.trigger.name),
+                note: Value(l.note),
+                lapDurationSeconds: Value(l.lapDurationSeconds),
+              ),
+            )
             .toList();
         await lapDao.insertMany(lapEntries);
       }

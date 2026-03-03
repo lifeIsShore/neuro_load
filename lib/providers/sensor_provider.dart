@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -81,8 +80,9 @@ class ZombieSession {
   Duration get duration => DateTime.now().difference(startedAt);
 }
 
-/// Provides a ZombieSession if there's an orphaned incomplete session
+/// Provides a [ZombieSession] if there's an orphaned incomplete session
 /// from a previous launch (app was force-quit or crashed mid-session).
+/// Returns null if everything was cleanly finished.
 final zombieSessionProvider = FutureProvider<ZombieSession?>((ref) async {
   final dao = ref.read(sessionDaoProvider);
   final incomplete = await dao.findIncomplete();
@@ -93,40 +93,3 @@ final zombieSessionProvider = FutureProvider<ZombieSession?>((ref) async {
     category: incomplete.category,
   );
 });
-
-// ── Zombie Recovery Widget ────────────────────────────────────────────────────
-
-class ZombieRecoveryModal extends StatelessWidget {
-  final ZombieSession zombie;
-  final VoidCallback onResume;
-  final VoidCallback onDiscard;
-
-  const ZombieRecoveryModal({
-    super.key,
-    required this.zombie,
-    required this.onResume,
-    required this.onDiscard,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final mins = zombie.duration.inMinutes;
-    return AlertDialog(
-      title: const Text('Session Still Running?'),
-      content: Text(
-        'We found an unfinished ${zombie.category} session (~$mins min). '
-        'What would you like to do?',
-      ),
-      actions: [
-        TextButton(
-          onPressed: onDiscard,
-          child: const Text('Discard'),
-        ),
-        ElevatedButton(
-          onPressed: onResume,
-          child: const Text('Continue Session'),
-        ),
-      ],
-    );
-  }
-}
