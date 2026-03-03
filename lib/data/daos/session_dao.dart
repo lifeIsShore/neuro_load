@@ -128,4 +128,75 @@ class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
         ..orderBy([(s) => OrderingTerm.desc(s.sessionOneRmSeconds)])
         ..limit(5))
       .get();
+
+  // ── Filtered Queries (for Dashboard category filter) ─────────────────────
+
+  /// Helper that applies the standard completed + optional category filter.
+  SimpleSelectStatement<$SessionsTable, Session> _filteredSelect(
+      String? category) {
+    final q = select(sessions)..where((s) => s.isCompleted.equals(true));
+    if (category != null) {
+      q.where((s) => s.category.equals(category));
+    }
+    return q;
+  }
+
+  /// Watch all completed sessions, optionally filtered by category.
+  Stream<List<Session>> watchCompletedFiltered(String? category) =>
+      (_filteredSelect(category)
+            ..orderBy([(s) => OrderingTerm.desc(s.startedAt)]))
+          .watch();
+
+  /// Count of completed sessions, optionally filtered by category.
+  Future<int> countCompletedFiltered(String? category) async {
+    final count = sessions.id.count();
+    final query = selectOnly(sessions)
+      ..where(sessions.isCompleted.equals(true))
+      ..addColumns([count]);
+    if (category != null) {
+      query.where(sessions.category.equals(category));
+    }
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  /// All-time longest 1RM, optionally filtered by category.
+  Future<int> allTimeOneRMFiltered(String? category) async {
+    final max = sessions.sessionOneRmSeconds.max();
+    final query = selectOnly(sessions)
+      ..where(sessions.isCompleted.equals(true))
+      ..addColumns([max]);
+    if (category != null) {
+      query.where(sessions.category.equals(category));
+    }
+    final row = await query.getSingle();
+    return row.read(max) ?? 0;
+  }
+
+  /// Average focus density, optionally filtered by category.
+  Future<double> avgFocusDensityFiltered(String? category) async {
+    final avg = sessions.focusDensity.avg();
+    final query = selectOnly(sessions)
+      ..where(sessions.isCompleted.equals(true))
+      ..addColumns([avg]);
+    if (category != null) {
+      query.where(sessions.category.equals(category));
+    }
+    final row = await query.getSingle();
+    return row.read(avg) ?? 0.0;
+  }
+
+  /// Sessions for the last 90 days, optionally filtered by category.
+  Future<List<Session>> last90DaysFiltered(String? category) async {
+    final cutoff = DateTime.now().subtract(const Duration(days: 90));
+    final q = select(sessions)
+      ..where((s) =>
+          s.isCompleted.equals(true) &
+          s.startedAt.isBiggerOrEqualValue(cutoff.millisecondsSinceEpoch));
+    if (category != null) {
+      q.where((s) => s.category.equals(category));
+    }
+    q.orderBy([(s) => OrderingTerm.asc(s.startedAt)]);
+    return q.get();
+  }
 }

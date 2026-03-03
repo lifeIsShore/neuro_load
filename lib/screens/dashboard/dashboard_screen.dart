@@ -40,7 +40,29 @@ class DashboardScreen extends ConsumerWidget {
               Text('Your Stats',
                   style: Theme.of(context).textTheme.headlineLarge),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // ── Category Filter Chips ───────────────────────────────────────
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _CategoryChip(
+                      label: 'All',
+                      value: null,
+                      ref: ref,
+                    ),
+                    ...PrimaryCategory.values.map((cat) => _CategoryChip(
+                          label: cat.label,
+                          value: cat.name,
+                          ref: ref,
+                        )),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               // ── Coach Insight Card ──────────────────────────────────────────
               insightsAsync.when(
@@ -574,6 +596,49 @@ class _ChartSkeleton extends StatelessWidget {
         child: Text(label,
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center),
+      ),
+    );
+  }
+}
+
+// ── Category Filter Chip ──────────────────────────────────────────────────────
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final String? value; // null = "All"
+  final WidgetRef ref;
+
+  const _CategoryChip({
+    required this.label,
+    required this.value,
+    required this.ref,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final active = ref.watch(categoryFilterProvider) == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: active,
+        onSelected: (_) =>
+            ref.read(categoryFilterProvider.notifier).state = value,
+        selectedColor: AppColors.teal,
+        backgroundColor: AppColors.surfaceElevated,
+        side: BorderSide(
+          color: active ? AppColors.teal : AppColors.silverGrayDim,
+          width: 0.5,
+        ),
+        labelStyle: TextStyle(
+          color: active ? Colors.black : AppColors.textSecondary,
+          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+          fontSize: 13,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
       ),
     );
   }

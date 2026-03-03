@@ -39,6 +39,22 @@ class LapDao extends DatabaseAccessor<AppDatabase> with _$LapDaoMixin {
     return map;
   }
 
+  /// Aggregate trigger counts, filtered to laps belonging to [sessionIds].
+  /// Pass null for all sessions (unfiltered).
+  Future<Map<String, int>> triggerCountMapFiltered(
+      List<int>? sessionIds) async {
+    final q = select(laps)..orderBy([(l) => OrderingTerm.asc(l.trigger)]);
+    if (sessionIds != null) {
+      q.where((l) => l.sessionId.isIn(sessionIds));
+    }
+    final rows = await q.get();
+    final map = <String, int>{};
+    for (final row in rows) {
+      map[row.trigger] = (map[row.trigger] ?? 0) + 1;
+    }
+    return map;
+  }
+
   /// Average recovery time = avg lap duration excluding the longest lap
   Future<double> avgRecoverySeconds(int sessionId) async {
     final rows = await lapsForSession(sessionId);

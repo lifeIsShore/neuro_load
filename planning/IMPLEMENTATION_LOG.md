@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-03 (Zombie Recovery)  
+**Last Updated:** 2026-03-03 (Category Filter)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -19,7 +19,7 @@
 |-------|-------|--------|-------|
 | MVP.000.001 | The Manifesto Screen | ✅ DONE | Typewriter animation, scroll-to-unlock, `has_completed_onboarding` SharedPrefs flag — all implemented in `onboarding_screen.dart` |
 | MVP.000.002 | Lap Mechanic Tutorial | ✅ DONE | Interactive mock DISTRACTED button with haptic, tap-to-proceed logic in `_LapTutorialPage` |
-| MVP.000.003 | Sensor Calibration | 🔨 PARTIAL | UI page exists (`_SensorCalibrationPage`), but **no actual sensor sampling or SharedPrefs baseline storage** — the page is currently descriptive text only |
+| MVP.000.003 | Sensor Calibration | ✅ DONE | `_SensorCalibrationPage` converted to `StatefulWidget` — 3-phase flow (idle → sampling → done), live `accelerometerEventStream` + 3-sample averaging, animated teal arc painter, `SharedPreferences.setDouble('sensor_z_baseline')` persisted on finish; Skip fallback for emulators. `FaceDownNotifier` reads the baseline at startup via `_loadThresholdThenSubscribe()` |
 | MVP.000.004 | Intent Statement Practice | ✅ DONE | Text input with 10-char minimum validation, in `_IntentPracticePage` |
 | MVP.000.005 | Baseline Test (5-min timer) | 🔨 PARTIAL | Page UI exists (`_BaselineTestPage`) but it is **informational only** — no embedded live timer, no session saved from onboarding |
 | MVP.000.006 | Founder's Oath / Privacy Overview | ✅ DONE | Three privacy bullet points, "I Agree" button sets the onboarding flag and navigates to `/setup` |
@@ -54,7 +54,7 @@
 | MVP.002.001 | Focus Heatmap (daily grid) | 🔨 PARTIAL | 90-day GitHub-style grid heatmap implemented (`_FocusHeatmap`); **not the spec's 24-hour circular heatmap** — uses day count, no daily/weekly/monthly toggle |
 | MVP.002.002 | 1RM Tracking | ✅ DONE | `allTimeOneRmProvider` queries DB; KPI card shows all-time 1RM; line chart `_OneRMLineChart` shows 1RM progression over sessions |
 | MVP.002.003 | Distraction Trigger Breakdown | ✅ DONE | `_DistractionDoughnut` pie/donut chart via `fl_chart`; uses `triggerCountMapProvider`; handles empty state |
-| MVP.002.004 | Category-Specific Analytics Filter | ❌ NOT STARTED | No category dropdown/tab in Dashboard; all queries are unfiltered |
+| MVP.002.004 | Category-Specific Analytics Filter | ✅ DONE | `categoryFilterProvider` StateProvider drives filtered DAO queries; horizontal `ChoiceChip` row (All/Study/Work/Creative/Admin/Lifestyle) in Dashboard; all KPI cards, heatmap, donut, and 1RM chart react to filter changes |
 | US 3.3 | Focus Density KPI | ✅ DONE | `avgFocusDensityProvider` shown as a KPI card |
 | US 3.8 | Trophy Room | ✅ DONE | `TrophyRoomScreen` built at `/trophies`; shows top 5 sessions by 1RM; dashboard card wired |
 | US 4.1 | Coach — Silent Week / Baseline Gate | ✅ DONE | `CoachEngine._baselineThreshold = 10`; shows "X sessions until Coach Intelligence unlocks" until threshold |
@@ -137,8 +137,6 @@
 |----------|-----|-----------------|
 | 🔴 HIGH | Paywall gate not wired to app startup | MVP.003.002, MVP.003.004 |
 | 🔴 HIGH | Stripe Checkout not integrated | MVP.003.003 |
-|  MED | Category filter for Dashboard missing | MVP.002.004 |
-| 🟡 MED | Sensor calibration in onboarding is UI-only | MVP.000.003 |
 | 🟡 MED | Heatmap is daily grid, not 24-hour circular | MVP.002.001 |
 | 🟢 LOW | Baseline Test in onboarding is static | MVP.000.005 |
 | 🟢 LOW | Adaptive sensor polling not throttled | US 7.3 |
@@ -168,16 +166,23 @@ The **core training loop** is production-quality:
 
 ---
 
-### 🎯 NEXT: Real Sensor Calibration in Onboarding (MVP.000.003)
+### ✅ COMPLETED: Real Sensor Calibration in Onboarding (MVP.000.003)
 
-**Why next?** The current `_SensorCalibrationPage` is descriptive text only. Completing it makes onboarding truthful and improves face-down trigger accuracy from day one.
+`_SensorCalibrationPage` → StatefulWidget → 3-phase flow (idle/sampling/done) → live `accelerometerEventStream` → 3-sample averaging with animated teal arc → `SharedPreferences.setDouble('sensor_z_baseline')` → `FaceDownNotifier._loadThresholdThenSubscribe()` picks up the value at startup. Skip fallback for emulators.
+
+---
+
+### ✅ COMPLETED: Category Filter for Dashboard (MVP.002.004)
+
+`categoryFilterProvider` StateProvider → all 7 analytics providers rewired to `ref.watch(categoryFilterProvider)` → filtered DAO methods in `SessionDao` + `LapDao` → `_CategoryChip` widget with `ChoiceChip` row in `DashboardScreen`. All KPIs, heatmap, donut chart, and 1RM line chart react to category selection.
+
+---
+
+### 🎯 NEXT: Paywall Gate & Stripe (MVP.003.002/003/004)
+
+**Why next?** With the core loop bulletproof (zombie recovery), onboarding honest (sensor calibration), and analytics segmented (category filter), the monetisation layer is the last critical piece before public beta.
 
 **What to build:**
-1. Add a `sensors_plus` accelerometer stream listener inside `_SensorCalibrationPage`.
-2. Collect 3 samples at 1-second intervals and average the Z-axis reading.
-3. Persist the baseline as `SharedPreferences.setDouble('face_down_z_baseline', avg)`.
-4. Use the persisted baseline in `FaceDownNotifier._zThreshold` instead of the hardcoded `-8.0`.
-
-**After Sensor Calibration, the recommended sequence is:**
-1. **Category Filter for Dashboard** (MVP.002.004) — segment analytics by Work/Study/etc.
-2. **Paywall gate & Stripe** (MVP.003.002/003/004) — once beta feedback is in.
+1. **MVP.003.002** — Session-count gate on app launch (redirect to `/paywall` after N free sessions).
+2. **MVP.003.003** — Stripe Checkout via Supabase Edge Function.
+3. **MVP.003.004** — `isUserPaid()` license verification check.

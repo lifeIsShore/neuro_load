@@ -365,37 +365,55 @@ final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>(
 
 // ── Analytics Providers ───────────────────────────────────────────────────────
 
-/// Stream of all completed sessions (newest first)
+/// Active category filter for the Dashboard. `null` = show all categories.
+final categoryFilterProvider = StateProvider<String?>((ref) => null);
+
+/// Stream of all completed sessions (newest first), filtered by active category
 final completedSessionsProvider = StreamProvider<List<Session>>((ref) {
-  return ref.watch(sessionDaoProvider).watchCompleted();
+  final cat = ref.watch(categoryFilterProvider);
+  return ref.watch(sessionDaoProvider).watchCompletedFiltered(cat);
 });
 
-/// Completed session count — gates coach insights
+/// Completed session count — gates coach insights, filtered by category
 final sessionCountProvider = FutureProvider<int>((ref) {
-  return ref.watch(sessionDaoProvider).countCompleted();
+  final cat = ref.watch(categoryFilterProvider);
+  return ref.watch(sessionDaoProvider).countCompletedFiltered(cat);
 });
 
-/// All-time 1RM in seconds
+/// All-time 1RM in seconds, filtered by category
 final allTimeOneRmProvider = FutureProvider<int>((ref) {
-  return ref.watch(sessionDaoProvider).allTimeOneRM();
+  final cat = ref.watch(categoryFilterProvider);
+  return ref.watch(sessionDaoProvider).allTimeOneRMFiltered(cat);
 });
 
-/// Average focus density across all sessions
+/// Average focus density across sessions, filtered by category
 final avgFocusDensityProvider = FutureProvider<double>((ref) {
-  return ref.watch(sessionDaoProvider).avgFocusDensity();
+  final cat = ref.watch(categoryFilterProvider);
+  return ref.watch(sessionDaoProvider).avgFocusDensityFiltered(cat);
 });
 
-/// Trigger count map for the distraction breakdown chart
-final triggerCountMapProvider = FutureProvider<Map<String, int>>((ref) {
-  return ref.watch(lapDaoProvider).triggerCountMap();
+/// Trigger count map for distraction breakdown, filtered by category.
+/// First gets session IDs for the category, then filters laps.
+final triggerCountMapProvider = FutureProvider<Map<String, int>>((ref) async {
+  final cat = ref.watch(categoryFilterProvider);
+  if (cat == null) {
+    return ref.watch(lapDaoProvider).triggerCountMap();
+  }
+  // Get session IDs for this category, then filter laps by those IDs
+  final sessions = await ref.watch(sessionDaoProvider).allCompleted();
+  final ids =
+      sessions.where((s) => s.category == cat).map((s) => s.id).toList();
+  if (ids.isEmpty) return {};
+  return ref.watch(lapDaoProvider).triggerCountMapFiltered(ids);
 });
 
-/// Last 90 days of sessions for heatmap
+/// Last 90 days of sessions for heatmap, filtered by category
 final last90DaysProvider = FutureProvider<List<Session>>((ref) {
-  return ref.watch(sessionDaoProvider).last90Days();
+  final cat = ref.watch(categoryFilterProvider);
+  return ref.watch(sessionDaoProvider).last90DaysFiltered(cat);
 });
 
-/// Top 5 sessions by 1RM — powers the Trophy Room screen
+/// Top 5 sessions by 1RM — powers the Trophy Room screen (always unfiltered)
 final top5OneRmProvider = FutureProvider<List<Session>>((ref) {
   return ref.watch(sessionDaoProvider).top5ByOneRM();
 });
