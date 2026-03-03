@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/database_providers.dart';
 
@@ -9,22 +10,29 @@ import '../data/database_providers.dart';
 /// Watches the accelerometer. Emits `true` when the device is face-down
 /// (Z-axis ≤ threshold) for at least [holdDuration].
 ///
-/// Usage:
-///   ref.listen(faceDownStartProvider, (_, event) {
-///     if (event.valueOrNull == true) ref.read(sessionProvider.notifier).startSession();
-///   });
+/// On startup, reads `sensor_z_baseline` from SharedPreferences (written by
+/// the onboarding calibration page). Falls back to [_defaultZThreshold] if
+/// the key is absent (emulator / calibration skipped).
 
-const _zThreshold = -8.0; // m/s² — negative Z means face-down
+const double _defaultZThreshold = -8.0; // m/s² — fallback sentinel
 const _holdDuration = Duration(milliseconds: 1500);
 
 class FaceDownNotifier extends StateNotifier<bool> {
   FaceDownNotifier() : super(false) {
-    _subscribe();
+    _loadThresholdThenSubscribe();
   }
 
   StreamSubscription<AccelerometerEvent>? _sub;
   Timer? _holdTimer;
   bool _isDown = false;
+  double _zThreshold = _defaultZThreshold;
+
+  Future<void> _loadThresholdThenSubscribe() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getDouble('sensor_z_baseline');
+    if (saved != null) _zThreshold = saved;
+    _subscribe();
+  }
 
   void _subscribe() {
     _sub = accelerometerEventStream(

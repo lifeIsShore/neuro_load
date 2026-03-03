@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-03  
+**Last Updated:** 2026-03-03 (Zombie Recovery)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -41,8 +41,8 @@
 | MVP.001.009 | End Session (Long-Press Finish) | ✅ DONE | `LongPressFinishButton` widget with circular fill animation over 2 seconds; cancels if released early |
 | MVP.001.010 | Quality Score Calculation | ✅ DONE | `SessionState.qualityScore` computed from focus density minus lap penalty; persisted via `finishSession()` |
 | MVP.001.011 | Post-Session Summary Screen | ✅ DONE | `SummaryScreen` shows Quality Score card, Session 1RM, Focus Density, Lap count, Top Distraction trigger |
-| MVP.001.012 | Zombie Session Guardrail | 🔨 PARTIAL | `resumeZombieSession()` method exists in `SessionNotifier`, but **no background Timer.periodic or periodic check logic is wired yet** |
-| MVP.001.013 | Recovery Modal (After Zombie) | ❌ NOT STARTED | No launch-check for parked sessions and no recovery UI/modal built |
+| MVP.001.012 | Zombie Session Guardrail | ✅ DONE | `zombieSessionProvider` in `sensor_provider.dart` queries `findIncomplete()` on launch; `AppShell.initState` calls `_checkZombie()` via `addPostFrameCallback` and invokes `resumeZombieSession()` on confirm |
+| MVP.001.013 | Recovery Modal (After Zombie) | ✅ DONE | `ZombieRecoveryModal` in `zombie_recovery_modal.dart` — pulsing red icon, info chip (category + elapsed), Resume CTA, 2-step Discard confirm (Keep / Yes Discard), `AnimatedSwitcher` transition |
 | US 1.9 | Haptic Milestones (10-min ticks) | ✅ DONE | `_checkHapticMilestone()` in timer triggers `HapticFeedback.lightImpact()` at every 600 seconds |
 
 ---
@@ -137,8 +137,7 @@
 |----------|-----|-----------------|
 | 🔴 HIGH | Paywall gate not wired to app startup | MVP.003.002, MVP.003.004 |
 | 🔴 HIGH | Stripe Checkout not integrated | MVP.003.003 |
-| 🔴 HIGH | Zombie session periodic check not running | MVP.001.012/013 |
-| 🟡 MED | Category filter for Dashboard missing | MVP.002.004 |
+|  MED | Category filter for Dashboard missing | MVP.002.004 |
 | 🟡 MED | Sensor calibration in onboarding is UI-only | MVP.000.003 |
 | 🟡 MED | Heatmap is daily grid, not 24-hour circular | MVP.002.001 |
 | 🟢 LOW | Baseline Test in onboarding is static | MVP.000.005 |
@@ -163,20 +162,22 @@ The **core training loop** is production-quality:
 
 ## Recommended Next Implementation Brick
 
-### 🎯 NEXT: Zombie Session Periodic Check & Recovery
+### ✅ COMPLETED: Zombie Session Recovery (MVP.001.012 + MVP.001.013)
 
-**Why next?** Core functionality and data integrity. Since monetization (Paywall/Stripe) is being deferred until after the beta group tests, we need to ensure the core app loop is bulletproof. The zombie session check catches edge cases where the app is killed mid-session.
+`zombieSessionProvider` → `findIncomplete()` DB query → `AppShell._checkZombie()` launch hook → `ZombieRecoveryModal` with Resume / 2-step Discard → `resumeZombieSession()` restores full session state. All wired and verified.
 
-**Prerequisites:**
-- `resumeZombieSession()` method already exists in `SessionNotifier` ✅
-- Core session logic persists active session correctly ✅
+---
+
+### 🎯 NEXT: Real Sensor Calibration in Onboarding (MVP.000.003)
+
+**Why next?** The current `_SensorCalibrationPage` is descriptive text only. Completing it makes onboarding truthful and improves face-down trigger accuracy from day one.
 
 **What to build:**
-1. Add a launch-time or lifecycle-hook check for parked "in-progress" sessions.
-2. Build the Recovery Modal to prompt the user to resume or discard.
-3. Wire the periodic background/foreground heartbeat if needed.
+1. Add a `sensors_plus` accelerometer stream listener inside `_SensorCalibrationPage`.
+2. Collect 3 samples at 1-second intervals and average the Z-axis reading.
+3. Persist the baseline as `SharedPreferences.setDouble('face_down_z_baseline', avg)`.
+4. Use the persisted baseline in `FaceDownNotifier._zThreshold` instead of the hardcoded `-8.0`.
 
-**After Zombie Session Check, the recommended sequence is:**
-1. **Sensor Calibration in Onboarding** (MVP.000.003) — replace UI-only stub with real sensor reads.
-2. **Category Filter for Dashboard** (MVP.002.004) — segment analytics.
-3. **Paywall gate & Stripe** — once the beta sample group test completes.
+**After Sensor Calibration, the recommended sequence is:**
+1. **Category Filter for Dashboard** (MVP.002.004) — segment analytics by Work/Study/etc.
+2. **Paywall gate & Stripe** (MVP.003.002/003/004) — once beta feedback is in.

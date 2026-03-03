@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../theme/app_theme.dart';
@@ -179,7 +181,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       HapticFeedback.heavyImpact();
                     },
                   ),
-                  _SensorCalibrationPage(),
+                  _SensorCalibrationPage(
+                    onCalibrated: () => setState(() => _canProceed = true),
+                  ),
                   _IntentPracticePage(
                     controller: _intentController,
                     onChanged: (v) {
@@ -381,7 +385,104 @@ class _LapTutorialPageState extends State<_LapTutorialPage>
 
 // ─── Page 3: Sensor Calibration ───────────────────────────────────────────────
 
-class _SensorCalibrationPage extends StatelessWidget {
+enum _CalibrationPhase { idle, sampling, done }
+
+class _SensorCalibrationPage extends StatefulWidget {
+  final VoidCallback onCalibrated;
+  const _SensorCalibrationPage({required this.onCalibrated});
+
+  @override
+  State<_SensorCalibrationPage> createState() => _SensorCalibrationPageState();
+}
+
+class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
+    with SingleTickerProviderStateMixin {
+  _CalibrationPhase _phase = _CalibrationPhase.idle;
+
+  // Live sensor state
+  StreamSubscription<AccelerometerEvent>? _sensorSub;
+  double _currentZ = 0.0;
+
+  // Sample collection
+  static const int _targetSamples = 3;
+  final List<double> _samples = [];
+
+  // Animation for the progress arc
+  late final AnimationController _arcController;
+  late final Animation<double> _arcAnim;
+
+  // Per-sample countdown timer
+  Timer? _sampleTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _arcController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: _targetSamples),
+    );
+    _arcAnim = Tween<double>(begin: 0.0, end: 1.0).animate(_arcController);
+  }
+
+  @override
+  void dispose() {
+    _sensorSub?.cancel();
+    _sampleTimer?.cancel();
+    _arcController.dispose();
+    super.dispose();
+  }
+
+  void _startCalibration() {
+    setState(() {
+      _phase = _CalibrationPhase.sampling;
+      _samples.clear();
+    });
+    _arcController.forward(from: 0.0);
+
+    // Subscribe to accelerometer
+    _sensorSub = accelerometerEventStream(
+      samplingPeriod: SensorInterval.normalInterval,
+    ).listen((e) {
+      if (mounted) setState(() => _currentZ = e.z);
+    }, onError: (_) => _onSensorError());
+
+    // Collect 1 sample per second
+    _sampleTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      _samples.add(_currentZ);
+      if (_samples.length >= _targetSamples) {
+        t.cancel();
+        _sensorSub?.cancel();
+        _finishCalibration();
+      }
+    });
+  }
+
+  Future<void> _finishCalibration() async {
+    final avg = _samples.reduce((a, b) => a + b) / _samples.length;
+
+    // Persist the averaged baseline
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('sensor_z_baseline', avg);
+
+    HapticFeedback.mediumImpact();
+    if (mounted) {
+      setState(() => _phase = _CalibrationPhase.done);
+      widget.onCalibrated();
+    }
+  }
+
+  void _onSensorError() {
+    _sampleTimer?.cancel();
+    if (mounted && _phase == _CalibrationPhase.sampling) {
+      _arcController.stop();
+      _skip(); // Graceful degradation on sensor failure
+    }
+  }
+
+  void _skip() {
+    widget.onCalibrated(); // Unlock Continue without saving any baseline
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -398,46 +499,173 @@ class _SensorCalibrationPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Container(width: 40, height: 2, color: AppColors.teal),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Text(
             'Place your phone face-down on your desk to start sessions '
-            'without touching the screen. The gyroscope calibration happens '
-            'automatically — nothing required from you.',
+            'without touching the screen. We\'ll take a 3-second reading '
+            'to calibrate the trigger threshold to your exact surface.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.8),
           ),
           const Spacer(),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.silverGrayDim, width: 0.5),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.phone_android,
-                    size: 64, color: AppColors.silverGray),
-                const SizedBox(height: 16),
-                Text(
-                  'Phone face-down = session starts',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+
+          // ── Central visual ────────────────────────────────────────────────
+          Center(child: _buildVisual(context)),
+          const SizedBox(height: 32),
+
+          // ── Calibrate button ──────────────────────────────────────────────
+          if (_phase != _CalibrationPhase.done)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _phase == _CalibrationPhase.idle
+                    ? _startCalibration
+                    : null, // disabled while sampling
+                child: Text(
+                  _phase == _CalibrationPhase.sampling
+                      ? 'Calibrating…'
+                      : 'Calibrate',
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'A double haptic pulse will confirm.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
+              ),
             ),
-          ),
+
+          // ── Skip link ─────────────────────────────────────────────────────
+          if (_phase == _CalibrationPhase.idle) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: GestureDetector(
+                onTap: _skip,
+                child: Text(
+                  'Skip calibration',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                        decoration: TextDecoration.underline,
+                      ),
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 32),
         ],
       ),
     );
   }
+
+  Widget _buildVisual(BuildContext context) {
+    switch (_phase) {
+      case _CalibrationPhase.idle:
+        return Container(
+          width: 160,
+          height: 160,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.silverGrayDim, width: 0.5),
+          ),
+          child: const Icon(Icons.phone_android,
+              size: 72, color: AppColors.silverGray),
+        );
+
+      case _CalibrationPhase.sampling:
+        return AnimatedBuilder(
+          animation: _arcAnim,
+          builder: (_, __) => SizedBox(
+            width: 160,
+            height: 160,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Progress arc
+                CustomPaint(
+                  size: const Size(160, 160),
+                  painter: _ArcPainter(progress: _arcAnim.value),
+                ),
+                // Live Z readout
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _currentZ.toStringAsFixed(2),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(color: AppColors.teal, fontFeatures: [
+                        const FontFeature.tabularFigures()
+                      ]),
+                    ),
+                    Text(
+                      'm/s²  Z',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sample ${_samples.length + 1}/$_targetSamples',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case _CalibrationPhase.done:
+        return Container(
+          width: 160,
+          height: 160,
+          decoration: BoxDecoration(
+            color: AppColors.tealDim,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.teal, width: 1),
+          ),
+          child:
+              const Icon(Icons.check_rounded, size: 72, color: AppColors.teal),
+        );
+    }
+  }
+}
+
+/// Custom painter that draws a sweeping teal arc from the top
+class _ArcPainter extends CustomPainter {
+  final double progress; // 0.0 → 1.0
+
+  const _ArcPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 6;
+
+    // Track
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = AppColors.silverGrayDim.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6,
+    );
+
+    // Sweep arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2, // start at 12 o'clock
+      2 * pi * progress, // sweep clockwise
+      false,
+      Paint()
+        ..color = AppColors.teal
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ArcPainter old) => old.progress != progress;
 }
 
 // ─── Page 4: Intent Practice ──────────────────────────────────────────────────
