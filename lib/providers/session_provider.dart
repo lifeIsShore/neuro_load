@@ -388,3 +388,8 @@ final triggerCountMapProvider = FutureProvider<Map<String, int>>((ref) {
 final last90DaysProvider = FutureProvider<List<Session>>((ref) {
   return ref.watch(sessionDaoProvider).last90Days();
 });
+
+/// Top 5 sessions by 1RM — powers the Trophy Room screen
+final top5OneRmProvider = FutureProvider<List<Session>>((ref) {
+  return ref.watch(sessionDaoProvider).top5ByOneRM();
+});

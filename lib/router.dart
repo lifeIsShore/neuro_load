@@ -11,6 +11,7 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/paywall/paywall_screen.dart';
 import 'screens/shell/app_shell.dart';
+import 'screens/trophy_room/trophy_room_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -55,6 +56,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/trophies',
+            builder: (context, state) => const TrophyRoomScreen(),
           ),
         ],
       ),

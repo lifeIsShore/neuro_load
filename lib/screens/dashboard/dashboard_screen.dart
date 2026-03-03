@@ -110,7 +110,7 @@ class DashboardScreen extends ConsumerWidget {
                       subtitle: 'top 5 records',
                       icon: Icons.stars_outlined,
                       iconColor: AppColors.warning,
-                      onTap: () {},
+                      onTap: () => context.go('/trophies'),
                     ),
                   ),
                 ],
