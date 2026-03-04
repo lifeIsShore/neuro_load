@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/app_database.dart';
 import '../data/database_providers.dart';
+import '../services/foreground_service.dart';
 import '../services/notification_service.dart';
 import 'sensor_provider.dart' show ZombieSession;
 
@@ -296,7 +297,8 @@ class SessionNotifier extends StateNotifier<SessionState> {
     final now = DateTime.now();
     state = state.copyWith(phase: SessionPhase.complete, endTime: now);
 
-    // Dismiss the persistent notification.
+    // Stop the foreground service + dismiss notifications.
+    ForegroundService.stop();
     await NotificationService.dismissSessionNotification();
     _tickCount = 0;
 
@@ -338,6 +340,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
   }
 
   void resetSession() {
+    ForegroundService.stop();
     NotificationService.dismissSessionNotification();
     _tickCount = 0;
     state = const SessionState();

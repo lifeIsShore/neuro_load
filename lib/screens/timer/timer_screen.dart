@@ -1,11 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme/app_theme.dart';
 import '../../providers/session_provider.dart';
+import '../../services/foreground_service.dart';
 import 'widgets/breathing_ring.dart';
 import 'widgets/distraction_modal.dart';
 import 'widgets/lap_feed.dart';
@@ -19,20 +20,30 @@ class TimerScreen extends ConsumerStatefulWidget {
 }
 
 class _TimerScreenState extends ConsumerState<TimerScreen> {
-  Timer? _ticker;
   bool _showClock = true;
+
+  // Callback reference — kept so we can remove it in dispose.
+  late final void Function(Object) _onFgsTick;
 
   @override
   void initState() {
     super.initState();
-    _startTicker();
-  }
 
-  void _startTicker() {
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      ref.read(sessionProvider.notifier).tick();
-      _checkHapticMilestone();
-    });
+    _onFgsTick = (data) {
+      if (data == 'tick') {
+        ref.read(sessionProvider.notifier).tick();
+        _checkHapticMilestone();
+      }
+    };
+
+    // Register listener before starting the service so no tick is missed.
+    FlutterForegroundTask.addTaskDataCallback(_onFgsTick);
+
+    // Start the Android foreground service. On iOS this is a no-op because
+    // flutter_foreground_task doesn't run a background service there — the
+    // system keeps Flutter alive long enough for most sessions.
+    final category = ref.read(sessionProvider).category?.label ?? 'Focus';
+    ForegroundService.start(category: category);
   }
 
   void _checkHapticMilestone() {
@@ -44,7 +55,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    FlutterForegroundTask.removeTaskDataCallback(_onFgsTick);
+    // Do NOT stop the service here — the user may have just navigated away
+    // temporarily. The service is stopped explicitly in _finishSession and
+    // from SessionNotifier.finishSession / resetSession.
     super.dispose();
   }
 
@@ -74,7 +88,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 
   void _finishSession() {
-    _ticker?.cancel();
+    ForegroundService.stop();
     ref.read(sessionProvider.notifier).finishSession();
     HapticFeedback.mediumImpact();
     context.go('/summary');
@@ -198,7 +212,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.radio_button_checked,
+                      const Icon(Icons.radio_button_checked,
                           size: 20, color: AppColors.textSecondary),
                       const SizedBox(width: 10),
                       Text(

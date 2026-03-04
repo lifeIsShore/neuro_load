@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-04 (Baseline Test Live Timer)  
+**Last Updated:** 2026-03-04 (Android Foreground Service — US 7.5)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -96,7 +96,7 @@
 | US 7.1 | Lap Feed UI | ✅ DONE | `LapFeed` widget with `ListView.builder` shows a chronological list of laps with trigger emoji and note |
 | US 7.3 | Adaptive Sensor Polling | ❌ NOT STARTED | `sensors_plus` stream active but no throttle/polling frequency logic |
 | US 7.4 | Live Activities (iOS) | ❌ NOT STARTED | Not implemented |
-| US 7.5 | Foreground Service (Android) | 🔨 PARTIAL | `NotificationService.showSessionActive()` sends a persistent notification every 60 ticks; **no true Foreground Service / `flutter_foreground_task`** |
+| US 7.5 | Foreground Service (Android) | ✅ DONE | `flutter_foreground_task: ^9.2.0` added; `ForegroundTaskHandler` (new) drives 1-second tick in FGS isolate → `sendDataToMain('tick')` → `sessionNotifier.tick()` in main isolate via `addTaskDataCallback`; `ForegroundService` wrapper (new) exposes `start/stop`; `TimerScreen` switched from `Timer.periodic` to FGS callbacks; `finishSession()` / `resetSession()` both call `ForegroundService.stop()` as safety net; `AndroidManifest.xml` updated with `FOREGROUND_SERVICE_SPECIAL_USE` permission + service declaration |
 | US 2.1 | Dynamic Break Earning | ✅ DONE | `SessionState.earnedBreakDuration` computed from quality score × elapsed time (clamped 5–25 min); `_EarnedBreakBanner` on `SummaryScreen`; `/break` GoRoute passes `Duration` extra; `BreakTimerScreen` pre-selects earned duration with ★ EARNED badge |
 | US 2.2 | Break UI Color Shift | ✅ DONE | `BreakTimerScreen` uses teal/sage palette distinct from session mode |
 
@@ -138,7 +138,6 @@
 | 🔴 HIGH | Paywall gate not wired to app startup | MVP.003.002, MVP.003.004 |
 | 🔴 HIGH | Stripe Checkout not integrated | MVP.003.003 |
 | 🟡 MED | Heatmap is daily grid, not 24-hour circular | MVP.002.001 |
-| 🟢 LOW | Baseline Test in onboarding is static | MVP.000.005 |
 | 🟢 LOW | Adaptive sensor polling not throttled | US 7.3 |
 | 🟢 LOW | iOS Live Activities not started | US 7.4 |
 

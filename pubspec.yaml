@@ -54,6 +54,9 @@ dependencies:
   # HTTP client (for Supabase REST upsert)
   http: ^1.2.2
 
+  # Foreground service (keeps timer alive when app is backgrounded on Android)
+  flutter_foreground_task: ^9.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
