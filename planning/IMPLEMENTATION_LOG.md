@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-04 (Paywall Gate — MVP.003.001/002/004)  
+**Last Updated:** 2026-03-04 (US 7.3 Adaptive Sensor Polling + Docs)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -94,7 +94,7 @@
 | Story | Title | Status | Notes |
 |-------|-------|--------|-------|
 | US 7.1 | Lap Feed UI | ✅ DONE | `LapFeed` widget with `ListView.builder` shows a chronological list of laps with trigger emoji and note |
-| US 7.3 | Adaptive Sensor Polling | ❌ NOT STARTED | `sensors_plus` stream active but no throttle/polling frequency logic |
+| US 7.3 | Adaptive Sensor Polling | ✅ DONE | `FaceDownNotifier` now accepts `Ref`; listens to `sessionProvider.phase`; uses 200 ms sampling when `SessionPhase.active`, 2000 ms otherwise; stream cancelled & recreated on phase change |
 | US 7.4 | Live Activities (iOS) | ❌ NOT STARTED | Not implemented |
 | US 7.5 | Foreground Service (Android) | ✅ DONE | `flutter_foreground_task: ^9.2.0` added; `ForegroundTaskHandler` (new) drives 1-second tick in FGS isolate → `sendDataToMain('tick')` → `sessionNotifier.tick()` in main isolate via `addTaskDataCallback`; `ForegroundService` wrapper (new) exposes `start/stop`; `TimerScreen` switched from `Timer.periodic` to FGS callbacks; `finishSession()` / `resetSession()` both call `ForegroundService.stop()` as safety net; `AndroidManifest.xml` updated with `FOREGROUND_SERVICE_SPECIAL_USE` permission + service declaration |
 | US 2.1 | Dynamic Break Earning | ✅ DONE | `SessionState.earnedBreakDuration` computed from quality score × elapsed time (clamped 5–25 min); `_EarnedBreakBanner` on `SummaryScreen`; `/break` GoRoute passes `Duration` extra; `BreakTimerScreen` pre-selects earned duration with ★ EARNED badge |

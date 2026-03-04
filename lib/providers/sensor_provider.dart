@@ -4,11 +4,20 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/database_providers.dart';
+import 'session_provider.dart';
 
-// ── Face-Down Sensor Service ─────────────────────────────────────────────────
+// ── Face-Down Sensor Service ──────────────────────────────────────────────────
 
 /// Watches the accelerometer. Emits `true` when the device is face-down
 /// (Z-axis ≤ threshold) for at least [holdDuration].
+///
+/// ### US 7.3 — Adaptive Sensor Polling
+/// The sampling rate is throttled based on session phase to save battery:
+///
+/// | Phase | SamplingPeriod | approx. rate |
+/// |---|---|---|
+/// | Active session (running) | 200 ms (fastest) | ~5 Hz |
+/// | Idle / any other phase | 2 000 ms (slow) | 0.5 Hz |
 ///
 /// On startup, reads `sensor_z_baseline` from SharedPreferences (written by
 /// the onboarding calibration page). Falls back to [_defaultZThreshold] if
@@ -17,28 +26,62 @@ import '../data/database_providers.dart';
 const double _defaultZThreshold = -8.0; // m/s² — fallback sentinel
 const _holdDuration = Duration(milliseconds: 1500);
 
+/// Fast poll period used when a session is actively running.
+const _activePeriod = Duration(milliseconds: 200);
+
+/// Slow poll period used when the app is idle (saves significant battery).
+const _idlePeriod = Duration(milliseconds: 2000);
+
 class FaceDownNotifier extends StateNotifier<bool> {
-  FaceDownNotifier() : super(false) {
+  FaceDownNotifier(this._ref) : super(false) {
     _loadThresholdThenSubscribe();
+    // React to session phase changes — the ref is available because
+    // this notifier is constructed via a Ref-accepting factory (see bottom).
+    _ref.listen<SessionPhase>(
+      sessionProvider.select((s) => s.phase),
+      (prev, next) => _adaptPeriod(next),
+      fireImmediately: false,
+    );
   }
+
+  final Ref _ref;
 
   StreamSubscription<AccelerometerEvent>? _sub;
   Timer? _holdTimer;
   bool _isDown = false;
   double _zThreshold = _defaultZThreshold;
+  Duration _currentPeriod = _idlePeriod;
+
+  // ── Init ──────────────────────────────────────────────────────────────────
 
   Future<void> _loadThresholdThenSubscribe() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getDouble('sensor_z_baseline');
     if (saved != null) _zThreshold = saved;
-    _subscribe();
+    _subscribe(_currentPeriod);
   }
 
-  void _subscribe() {
+  // ── Stream management ─────────────────────────────────────────────────────
+
+  /// Subscribe (or re-subscribe) with the given [period].
+  void _subscribe(Duration period) {
+    _sub?.cancel();
+    _currentPeriod = period;
     _sub = accelerometerEventStream(
-      samplingPeriod: SensorInterval.normalInterval,
+      samplingPeriod: period,
     ).listen(_onEvent, onError: (_) {});
   }
+
+  /// Called whenever the session phase changes. Switches between fast
+  /// (active) and slow (idle) sampling without losing the z-threshold or
+  /// hold-timer state.
+  void _adaptPeriod(SessionPhase phase) {
+    final target = phase == SessionPhase.active ? _activePeriod : _idlePeriod;
+    if (target == _currentPeriod) return; // no change
+    _subscribe(target);
+  }
+
+  // ── Event handler ─────────────────────────────────────────────────────────
 
   void _onEvent(AccelerometerEvent e) {
     final nowDown = e.z <= _zThreshold;
@@ -67,7 +110,7 @@ class FaceDownNotifier extends StateNotifier<bool> {
 }
 
 final faceDownStartProvider = StateNotifierProvider<FaceDownNotifier, bool>(
-  (ref) => FaceDownNotifier(),
+  (ref) => FaceDownNotifier(ref),
 );
 
 // ── Zombie Session Detection ──────────────────────────────────────────────────
