@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/app_database.dart';
 import '../../data/database_providers.dart';
 import '../../services/export_service.dart';
+import '../../services/supabase_sync_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/session_provider.dart';
+
+// ── Sync status enum ─────────────────────────────────────────────────────────
+
+enum _SyncStatus { idle, syncing, success, error }
+
+// ── Settings Screen ──────────────────────────────────────────────────────────
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -16,10 +25,32 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _exporting = false;
+  _SyncStatus _syncStatus = _SyncStatus.idle;
+
+  // Supabase config state (loaded on init)
+  String _projectUrl = '';
+  String _anonKey = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSupabaseConfig();
+  }
+
+  Future<void> _loadSupabaseConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _projectUrl = prefs.getString('supabase_project_url') ?? '';
+        _anonKey = prefs.getString('supabase_anon_key') ?? '';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final isConfigured = _projectUrl.isNotEmpty && _anonKey.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -59,21 +90,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'Upgrade to NeuroLoad Pro',
                 trailing: const Icon(Icons.chevron_right,
                     color: AppColors.textTertiary),
-                onTap: () {},
+                onTap: () => context.go('/paywall'),
               ),
 
               const SizedBox(height: 24),
 
               // ── Privacy & Data ────────────────────────────────────────────
               _SettingsSection(title: 'PRIVACY & DATA'),
+
+              // Cloud Sync toggle
               _SettingsToggle(
                 icon: Icons.sync_outlined,
                 label: 'Cloud Sync',
-                subtitle: 'Requires Pro licence',
+                subtitle: isConfigured
+                    ? 'Tap to sync now'
+                    : 'Configure Supabase credentials below',
                 value: settings.cloudSyncEnabled,
-                onChanged: (v) =>
-                    ref.read(settingsProvider.notifier).toggleCloudSync(),
+                onChanged: (v) async {
+                  ref.read(settingsProvider.notifier).toggleCloudSync();
+                  if (v && isConfigured) {
+                    await _runSync(settings.localOnlyNotes);
+                  }
+                },
+                trailing2: _buildSyncChip(context),
               ),
+
+              // Manual sync button if enabled + configured
+              if (settings.cloudSyncEnabled && isConfigured)
+                _SettingsTile(
+                  icon: Icons.cloud_upload_outlined,
+                  label: 'Sync Now',
+                  subtitle: 'Push all sessions to Supabase',
+                  trailing: _syncStatus == _SyncStatus.syncing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.teal,
+                          ),
+                        )
+                      : const Icon(Icons.chevron_right,
+                          color: AppColors.textTertiary),
+                  onTap: _syncStatus == _SyncStatus.syncing
+                      ? null
+                      : () => _runSync(settings.localOnlyNotes),
+                ),
+
+              // Supabase config
+              _SettingsTile(
+                icon: Icons.key_outlined,
+                label: 'Supabase Credentials',
+                subtitle: isConfigured ? 'Configured ✓' : 'Not set',
+                trailing: const Icon(Icons.chevron_right,
+                    color: AppColors.textTertiary),
+                onTap: () => _showSupabaseConfig(context),
+              ),
+
               _SettingsToggle(
                 icon: Icons.note_alt_outlined,
                 label: 'Local-Only Notes',
@@ -177,6 +250,183 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Text(
                   'NeuroLoad v1.0.0',
                   style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Sync chip ─────────────────────────────────────────────────────────────
+
+  Widget? _buildSyncChip(BuildContext context) {
+    switch (_syncStatus) {
+      case _SyncStatus.idle:
+        return null;
+      case _SyncStatus.syncing:
+        return const SizedBox(
+          width: 16,
+          height: 16,
+          child:
+              CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal),
+        );
+      case _SyncStatus.success:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.success.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Text(
+            '✓ Synced',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.success,
+                  fontSize: 10,
+                ),
+          ),
+        );
+      case _SyncStatus.error:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.danger.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Text(
+            '✗ Error',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.danger,
+                  fontSize: 10,
+                ),
+          ),
+        );
+    }
+  }
+
+  // ── Cloud Sync ────────────────────────────────────────────────────────────
+
+  Future<void> _runSync(bool localOnlyNotes) async {
+    if (!mounted) return;
+    setState(() {
+      _syncStatus = _SyncStatus.syncing;
+    });
+
+    final service = SupabaseSyncService(AppDatabase.instance);
+    await service.load();
+    final result = await service.syncAll(localOnlyNotes: localOnlyNotes);
+
+    if (!mounted) return;
+    setState(() {
+      _syncStatus = result.success ? _SyncStatus.success : _SyncStatus.error;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        backgroundColor: result.success ? AppColors.teal : AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ── Supabase Config bottom sheet ─────────────────────────────────────────
+
+  void _showSupabaseConfig(BuildContext context) {
+    final urlCtrl = TextEditingController(text: _projectUrl);
+    final keyCtrl = TextEditingController(text: _anonKey);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SUPABASE CREDENTIALS',
+                style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                      color: AppColors.teal,
+                      letterSpacing: 2,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Your data stays encrypted in your own project.',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: urlCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Project URL',
+                  hintText: 'https://xxxx.supabase.co',
+                  prefixIcon: Icon(Icons.link, size: 18),
+                ),
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: keyCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Anon Key',
+                  hintText: 'eyJhbGci...',
+                  prefixIcon: Icon(Icons.key, size: 18),
+                ),
+                autocorrect: false,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final url = urlCtrl.text.trim();
+                    final key = keyCtrl.text.trim();
+                    if (url.isEmpty || key.isEmpty) return;
+
+                    final service = SupabaseSyncService(AppDatabase.instance);
+                    final cfg =
+                        SupabaseSyncConfig(projectUrl: url, anonKey: key);
+                    await service.saveConfig(cfg);
+
+                    if (context.mounted) Navigator.pop(ctx);
+
+                    // Reload config in parent and run a test ping
+                    await _loadSupabaseConfig();
+                    final result = await service.testConnection();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(result.success
+                              ? '✓ ${result.message}'
+                              : '✗ ${result.message}'),
+                          backgroundColor: result.success
+                              ? AppColors.teal
+                              : AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('SAVE & TEST CONNECTION'),
                 ),
               ),
             ],
@@ -353,6 +603,8 @@ class _SettingsToggle extends StatelessWidget {
   final String? subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  // Optional second trailing widget (e.g. a sync status chip)
+  final Widget? trailing2;
 
   const _SettingsToggle({
     required this.icon,
@@ -360,19 +612,36 @@ class _SettingsToggle extends StatelessWidget {
     this.subtitle,
     required this.value,
     required this.onChanged,
+    this.trailing2,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _SettingsTile(
-      icon: icon,
-      label: label,
-      subtitle: subtitle,
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppColors.teal,
+    return ListTile(
+      leading: Icon(icon, size: 20, color: AppColors.silverGray),
+      title: Text(
+        label,
+        style: Theme.of(context).textTheme.titleMedium,
       ),
+      subtitle: subtitle != null
+          ? Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)
+          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (trailing2 != null) ...[
+            trailing2!,
+            const SizedBox(width: 8),
+          ],
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.teal,
+          ),
+        ],
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      minLeadingWidth: 28,
     );
   }
 }

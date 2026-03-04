@@ -54,7 +54,10 @@ class SupabaseSyncService {
 
   /// Push all completed sessions + their laps to Supabase.
   /// Idempotent: uses upsert on the `id` column.
-  Future<SyncResult> syncAll() async {
+  ///
+  /// [localOnlyNotes] — when true, lap notes are stripped before upload
+  /// to honour the user's privacy preference (US 5.5).
+  Future<SyncResult> syncAll({bool localOnlyNotes = false}) async {
     final cfg = _config;
     if (cfg == null || !cfg.isConfigured) {
       return const SyncResult(
@@ -86,7 +89,7 @@ class SupabaseSyncService {
         await _upsert(cfg, 'sessions', sessionPayload);
         sessionCount++;
 
-        // Push laps
+        // Push laps — strip notes if the user wants local-only privacy
         final laps = await _db.lapDao.lapsForSession(session.id);
         for (final lap in laps) {
           await _upsert(cfg, 'laps', {
@@ -94,7 +97,8 @@ class SupabaseSyncService {
             'session_id': lap.sessionId,
             'occurred_at': lap.occurredAt,
             'trigger': lap.trigger,
-            'note': lap.note,
+            // Null out note payload when privacy mode is active (US 5.5)
+            'note': localOnlyNotes ? null : lap.note,
             'lap_duration_seconds': lap.lapDurationSeconds,
           });
           lapCount++;
@@ -107,6 +111,28 @@ class SupabaseSyncService {
       );
     } catch (e) {
       debugPrint('Supabase sync error: $e');
+      return SyncResult(success: false, message: e.toString());
+    }
+  }
+
+  /// Pings Supabase REST API to verify credentials are correct.
+  /// Returns a [SyncResult] with success=true if accessible.
+  Future<SyncResult> testConnection() async {
+    final cfg = _config;
+    if (cfg == null || !cfg.isConfigured) {
+      return const SyncResult(success: false, message: 'Not configured');
+    }
+    try {
+      final uri = Uri.parse('${cfg.projectUrl}/rest/v1/sessions?limit=1');
+      final response = await http.get(uri, headers: {
+        'apikey': cfg.anonKey,
+        'Authorization': 'Bearer ${cfg.anonKey}',
+      });
+      if (response.statusCode < 400) {
+        return const SyncResult(success: true, message: 'Connection verified');
+      }
+      return SyncResult(success: false, message: 'HTTP ${response.statusCode}');
+    } catch (e) {
       return SyncResult(success: false, message: e.toString());
     }
   }

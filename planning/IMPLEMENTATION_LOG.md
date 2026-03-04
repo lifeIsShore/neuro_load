@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-03 (Category Filter)  
+**Last Updated:** 2026-03-03 (Dynamic Break Earning + Cloud Sync Wire-Up)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -84,8 +84,8 @@
 |-------|-------|--------|-------|
 | US 5.1 | Local-First Data Storage (Drift) | ✅ DONE | All data stored in Drift SQLite (`app_database.dart`); sessions and laps persisted on finish |
 | US 5.3 | Data Export | ✅ DONE | See MVP.003.005 above |
-| US 5.4 | Cloud Sync (Opt-In, Paid) | ❌ NOT STARTED | Toggle exists in Settings UI but has no backend integration |
-| US 5.5 | Strict Privacy Toggle (Local Notes) | 🔨 PARTIAL | `localOnlyNotes` toggle exists in Settings and AppSettings state; **no sync payload logic to respect it** |
+| US 5.4 | Cloud Sync (Opt-In, Paid) | ✅ DONE | `SettingsScreen` wires Cloud Sync toggle → `SupabaseSyncService.syncAll()`; Supabase URL + Anon Key entry via bottom sheet; `testConnection()` ping on save; live sync status chip (↺ / ✓ / ✗) |
+| US 5.5 | Strict Privacy Toggle (Local Notes) | ✅ DONE | `SupabaseSyncService.syncAll(localOnlyNotes: bool)` — when true, `note` field is `null`-ed on all lap payloads before upload |
 
 ---
 
@@ -97,7 +97,7 @@
 | US 7.3 | Adaptive Sensor Polling | ❌ NOT STARTED | `sensors_plus` stream active but no throttle/polling frequency logic |
 | US 7.4 | Live Activities (iOS) | ❌ NOT STARTED | Not implemented |
 | US 7.5 | Foreground Service (Android) | 🔨 PARTIAL | `NotificationService.showSessionActive()` sends a persistent notification every 60 ticks; **no true Foreground Service / `flutter_foreground_task`** |
-| US 2.1 | Dynamic Break Earning | 🔨 PARTIAL | `break_timer_screen.dart` in `/summary` with teal color-shift UI; **break duration formula not implemented** — hardcoded duration |
+| US 2.1 | Dynamic Break Earning | ✅ DONE | `SessionState.earnedBreakDuration` computed from quality score × elapsed time (clamped 5–25 min); `_EarnedBreakBanner` on `SummaryScreen`; `/break` GoRoute passes `Duration` extra; `BreakTimerScreen` pre-selects earned duration with ★ EARNED badge |
 | US 2.2 | Break UI Color Shift | ✅ DONE | `BreakTimerScreen` uses teal/sage palette distinct from session mode |
 
 ---
@@ -178,9 +178,21 @@ The **core training loop** is production-quality:
 
 ---
 
+### ✅ COMPLETED: Dynamic Break Earning (US 2.1)
+
+`SessionState.earnedBreakDuration` computed property → quality score × elapsed time scaling → clamped 5–25 min → `_EarnedBreakBanner` banner on `SummaryScreen` → primary CTA navigates to `/break` with `Duration` extra → `BreakTimerScreen` accepts `earnedDuration` param, pre-selects it, shows ★ EARNED badge; scrollable 5-chip preset row.
+
+---
+
+### ✅ COMPLETED: Cloud Sync Wire-Up (US 5.4 + US 5.5)
+
+`SupabaseSyncService.syncAll(localOnlyNotes: bool)` → strips lap notes when privacy mode active → `testConnection()` ping method → `SettingsScreen` rewritten with Supabase config bottom sheet (URL + Anon Key), save+test flow, live sync status chip, and "Sync Now" manual trigger tile.
+
+---
+
 ### 🎯 NEXT: Paywall Gate & Stripe (MVP.003.002/003/004)
 
-**Why next?** With the core loop bulletproof (zombie recovery), onboarding honest (sensor calibration), and analytics segmented (category filter), the monetisation layer is the last critical piece before public beta.
+**Why next?** Core loop, onboarding, analytics, break recovery, and cloud sync are all production-quality. The monetisation gate is the final critical piece before public beta.
 
 **What to build:**
 1. **MVP.003.002** — Session-count gate on app launch (redirect to `/paywall` after N free sessions).

@@ -162,6 +162,37 @@ class SessionState {
     final penalty = laps.length * 3;
     return (density - penalty).clamp(0, 100);
   }
+
+  /// Earned break duration — Dynamic Break Earning (US 2.1)
+  ///
+  /// Formula:
+  ///   base = qualityScore × 0.2 seconds  (max ~20s/point = 2000s = 33min)
+  ///   scale by how close session was to its target (min 10min threshold)
+  ///   floor at 5 minutes, cap at 25 minutes
+  ///
+  /// Examples:
+  ///   Quality 90 / 45min session  → ~18 minutes
+  ///   Quality 60 / 25min session  → ~9  minutes
+  ///   Quality 30 / 15min session  → ~5  minutes (floored)
+  Duration get earnedBreakDuration {
+    const minEarnSeconds = 600; // 10 minutes — minimum session to earn a break
+    const minBreak = Duration(minutes: 5);
+    const maxBreak = Duration(minutes: 25);
+
+    final sessionSecs = elapsed.inSeconds;
+    if (sessionSecs < minEarnSeconds) return minBreak;
+
+    // Quality contribution: each quality point earns 12 seconds of break
+    final qBonus = qualityScore * 12.0;
+
+    // Session length bonus: bonus second per every 2 minutes beyond the target
+    final targetSecs = targetDuration?.inSeconds.toDouble() ?? 1800;
+    final progressRatio = (sessionSecs / targetSecs).clamp(0.5, 2.0);
+    final earned = (qBonus * progressRatio).round();
+
+    final clamped = earned.clamp(minBreak.inSeconds, maxBreak.inSeconds);
+    return Duration(seconds: clamped);
+  }
 }
 
 // ── Session Notifier ──────────────────────────────────────────────────────────

@@ -168,30 +168,123 @@ class SummaryScreen extends ConsumerWidget {
                 ),
               ],
 
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
+
+              // ── Earned Break Banner ───────────────────────────────────────
+              _EarnedBreakBanner(session: session),
+
+              const SizedBox(height: 32),
 
               // ── CTA ───────────────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
+                    final earned = session.earnedBreakDuration;
                     ref.read(sessionProvider.notifier).resetSession();
-                    context.go('/setup');
+                    context.go('/break', extra: earned);
                   },
-                  child: const Text('TRAIN AGAIN'),
+                  child: Text(
+                    'TAKE YOUR ${session.earnedBreakDuration.inMinutes}-MIN BREAK',
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
+                  onPressed: () {
+                    ref.read(sessionProvider.notifier).resetSession();
+                    context.go('/setup');
+                  },
+                  child: const Text('Skip Break — Train Again'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
                   onPressed: () => context.go('/dashboard'),
-                  child: const Text('View Progress'),
+                  child: Text(
+                    'View Progress',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.textTertiary),
+                  ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Earned Break Banner ──────────────────────────────────────────────────────
+
+class _EarnedBreakBanner extends StatelessWidget {
+  final SessionState session;
+  const _EarnedBreakBanner({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final earned = session.earnedBreakDuration;
+    final minutes = earned.inMinutes;
+    final qs = session.qualityScore.toStringAsFixed(0);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.teal.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.teal.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.teal.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.bedtime_outlined,
+                color: AppColors.teal, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'YOU EARNED YOUR REST',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.teal,
+                        letterSpacing: 2,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$minutes minutes of recovery',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Quality $qs × session length',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

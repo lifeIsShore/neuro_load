@@ -6,18 +6,27 @@ import 'package:go_router/go_router.dart';
 
 import '../../theme/app_theme.dart';
 
-// ── Break duration presets ────────────────────────────────────────────────────
+// ── Static presets (user can override after seeing their earned time) ─────────
 
 const _presets = [
   ('5 min', Duration(minutes: 5)),
   ('10 min', Duration(minutes: 10)),
   ('15 min', Duration(minutes: 15)),
+  ('20 min', Duration(minutes: 20)),
+  ('25 min', Duration(minutes: 25)),
 ];
 
 // ── Break Timer Screen ────────────────────────────────────────────────────────
 
 class BreakTimerScreen extends ConsumerStatefulWidget {
-  const BreakTimerScreen({super.key});
+  /// Pre-calculated earned Duration passed in from SummaryScreen via GoRouter.
+  /// Falls back to 5 minutes if not provided.
+  final Duration earnedDuration;
+
+  const BreakTimerScreen({
+    super.key,
+    this.earnedDuration = const Duration(minutes: 5),
+  });
 
   @override
   ConsumerState<BreakTimerScreen> createState() => _BreakTimerScreenState();
@@ -25,8 +34,8 @@ class BreakTimerScreen extends ConsumerStatefulWidget {
 
 class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
     with TickerProviderStateMixin {
-  Duration _selected = const Duration(minutes: 5);
-  Duration _remaining = const Duration(minutes: 5);
+  late Duration _selected;
+  late Duration _remaining;
   bool _running = false;
   Timer? _ticker;
 
@@ -37,6 +46,9 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
   @override
   void initState() {
     super.initState();
+    // Initialise with the earned duration, clamped to valid range
+    _selected = widget.earnedDuration;
+    _remaining = _selected;
     _ringController = AnimationController(
       vsync: this,
       duration: _selected,
@@ -136,48 +148,87 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                   const SizedBox(height: 40),
 
                   // ── Duration Presets ────────────────────────────────────────
-                  if (!_running)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: _presets.map((p) {
-                        final (label, dur) = p;
-                        final isSelected = dur == _selected;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: GestureDetector(
-                            onTap: () => _selectPreset(dur),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.restAccent.withOpacity(0.15)
-                                    : AppColors.restSurface,
-                                borderRadius: BorderRadius.circular(100),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.restAccent
-                                      : AppColors.restAccent.withOpacity(0.2),
-                                  width: isSelected ? 1.5 : 0.5,
-                                ),
-                              ),
-                              child: Text(
-                                label,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
-                                    ?.copyWith(
+                  if (!_running) ...[
+                    Text(
+                      'YOU EARNED ${widget.earnedDuration.inMinutes} MINUTES',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppColors.restAccent,
+                            letterSpacing: 2,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _presets.map((p) {
+                          final (label, dur) = p;
+                          final isSelected = dur == _selected;
+                          final isEarned =
+                              dur.inMinutes == widget.earnedDuration.inMinutes;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () => _selectPreset(dur),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isEarned)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(
+                                        '★ EARNED',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: AppColors.restAccent,
+                                              fontSize: 9,
+                                              letterSpacing: 1.5,
+                                            ),
+                                      ),
+                                    ),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 18, vertical: 10),
+                                    decoration: BoxDecoration(
                                       color: isSelected
                                           ? AppColors.restAccent
-                                          : AppColors.restText.withOpacity(0.6),
+                                              .withOpacity(0.18)
+                                          : AppColors.restSurface,
+                                      borderRadius: BorderRadius.circular(100),
+                                      border: Border.all(
+                                        color: isSelected || isEarned
+                                            ? AppColors.restAccent
+                                            : AppColors.restAccent
+                                                .withOpacity(0.2),
+                                        width: isSelected ? 1.5 : 0.5,
+                                      ),
                                     ),
+                                    child: Text(
+                                      label,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium
+                                          ?.copyWith(
+                                            color: isSelected
+                                                ? AppColors.restAccent
+                                                : AppColors.restText
+                                                    .withOpacity(0.6),
+                                            fontWeight: isEarned
+                                                ? FontWeight.w700
+                                                : FontWeight.normal,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
+                  ],
 
                   const Spacer(),
 

@@ -12,6 +12,7 @@ import 'screens/settings/settings_screen.dart';
 import 'screens/paywall/paywall_screen.dart';
 import 'screens/shell/app_shell.dart';
 import 'screens/trophy_room/trophy_room_screen.dart';
+import 'screens/summary/break_timer_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -33,6 +34,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/paywall',
         builder: (context, state) => const PaywallScreen(),
+      ),
+      GoRoute(
+        path: '/break',
+        builder: (context, state) {
+          // The Summary screen passes the earned Duration as GoRouter extra.
+          // Fall back to 5 minutes if navigated to directly.
+          final earned = state.extra is Duration
+              ? state.extra as Duration
+              : const Duration(minutes: 5);
+          return BreakTimerScreen(earnedDuration: earned);
+        },
       ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
