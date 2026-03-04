@@ -7,6 +7,7 @@ import '../data/database_providers.dart';
 import '../services/foreground_service.dart';
 import '../services/notification_service.dart';
 import 'sensor_provider.dart' show ZombieSession;
+import 'subscription_provider.dart';
 
 // ── Primary Category ─────────────────────────────────────────────────────────
 
@@ -336,7 +337,11 @@ class SessionNotifier extends StateNotifier<SessionState> {
       }
     } catch (e) {
       debugPrint('DB finishSession error: $e');
+      return; // don't increment if DB write failed
     }
+
+    // Advance the free-session gate counter.
+    await _ref.read(freeSessionsUsedProvider.notifier).increment();
   }
 
   void resetSession() {

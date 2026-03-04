@@ -9,6 +9,7 @@ import '../../services/export_service.dart';
 import '../../services/supabase_sync_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/session_provider.dart';
+import '../../providers/subscription_provider.dart';
 
 // ── Sync status enum ─────────────────────────────────────────────────────────
 
@@ -75,23 +76,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               // ── Licence ──────────────────────────────────────────────────
               _SettingsSection(title: 'LICENCE'),
-              _SettingsTile(
-                icon: Icons.stars_outlined,
-                label: 'Status',
-                trailing: Text(
-                  'FREE',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.warning,
+              Builder(builder: (ctx) {
+                final isPaid = ref.watch(isPaidProvider);
+                return Column(
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.stars_outlined,
+                      label: 'Status',
+                      trailing: Text(
+                        isPaid ? 'PLUS ✓' : 'FREE',
+                        style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
+                              color:
+                                  isPaid ? AppColors.teal : AppColors.warning,
+                            ),
                       ),
-                ),
-              ),
-              _SettingsTile(
-                icon: Icons.upgrade_outlined,
-                label: 'Upgrade to NeuroLoad Pro',
-                trailing: const Icon(Icons.chevron_right,
-                    color: AppColors.textTertiary),
-                onTap: () => context.go('/paywall'),
-              ),
+                    ),
+                    if (!isPaid)
+                      _SettingsTile(
+                        icon: Icons.upgrade_outlined,
+                        label: 'Upgrade to NeuroLoad Pro',
+                        trailing: const Icon(Icons.chevron_right,
+                            color: AppColors.textTertiary),
+                        onTap: () => context.go('/paywall'),
+                      ),
+                  ],
+                );
+              }),
 
               const SizedBox(height: 24),
 

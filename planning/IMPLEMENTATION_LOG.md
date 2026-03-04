@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-04 (24-Hour Circular Heatmap — MVP.002.001)  
+**Last Updated:** 2026-03-04 (Paywall Gate — MVP.003.001/002/004)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -69,10 +69,10 @@
 
 | Story | Title | Status | Notes |
 |-------|-------|--------|-------|
-| MVP.003.001 | Dynamic Pricing Display | 🔨 PARTIAL | `PaywallScreen` exists; pricing copy is **hardcoded**, not fetched from Stripe/Supabase |
-| MVP.003.002 | Forced Paywall After One Session | 🔨 PARTIAL | `/paywall` route exists; **no launch-check logic wired** — the session count gate (`checkPaywallEligibility()`) is not implemented; users are never redirected automatically |
-| MVP.003.003 | Stripe Checkout Integration | ❌ NOT STARTED | "Buy Now" button is a stub (`onTap: () {}`); no Supabase Edge Function created |
-| MVP.003.004 | License Status Verification | ❌ NOT STARTED | Settings shows hardcoded "FREE" status; no `isUserPaid()` function |
+| MVP.003.001 | Dynamic Pricing Display | ✅ DONE | `PaywallScreen` upgraded to `ConsumerStatefulWidget`; €49 lifetime price, feature list (incl. 24-hr Focus Ring), scarcity badge — all hardcoded pending Supabase dynamic pricing |
+| MVP.003.002 | Forced Paywall After One Session | ✅ DONE | `subscription_provider.dart`: `isPaidProvider` + `freeSessionsUsedProvider` (SharedPrefs-backed); `paywallGateProvider`; `finishSession()` calls `freeSessionsUsed.increment()`; GoRouter global redirect intercepts shell paths when gate fires |
+| MVP.003.003 | Stripe Checkout Integration | ❌ NOT STARTED | "Buy Now" shows SnackBar stub + TODO comment; no Supabase Edge Function created |
+| MVP.003.004 | License Status Verification | ✅ DONE | `isPaidProvider` (SharedPrefs `subscription_is_paid`); Settings screen shows live 'PLUS ✓' (teal) / 'FREE' (amber) chip; Upgrade tile hidden when paid; voucher redemption calls `markPaid()` with 800ms simulated RPC delay |
 | MVP.003.005 | GDPR Data Export (CSV) | ✅ DONE | Settings "Export Data" runs `ExportService.exportAllData()` using `share_plus` to generate `sessions.csv` and `laps.csv` |
 | MVP.003.006 | GDPR Delete Account (Wipe Data) | ✅ DONE | Wipes DB (laps then sessions), clears `SharedPreferences`, and resets memory state when confirmed |
 

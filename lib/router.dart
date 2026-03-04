@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'providers/subscription_provider.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/setup/setup_screen.dart';
 import 'screens/timer/timer_screen.dart';
@@ -24,6 +25,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!hasOnboarded && !state.uri.path.startsWith('/onboarding')) {
         return '/onboarding';
       }
+
+      // Paywall gate — free users get kFreeSessionLimit sessions.
+      final isPaid = prefs.getBool('subscription_is_paid') ?? false;
+      final used = prefs.getInt('subscription_free_sessions_used') ?? 0;
+      final gateHit = !isPaid && used >= kFreeSessionLimit;
+
+      // Only intercept navigation from within the main shell (not
+      // onboarding → paywall would be jarring before the user even
+      // gets to a session).
+      final shellPaths = [
+        '/setup',
+        '/timer',
+        '/summary',
+        '/dashboard',
+        '/settings',
+        '/trophies',
+        '/break'
+      ];
+      final isShellPath = shellPaths.any((p) => state.uri.path.startsWith(p));
+
+      if (gateHit && isShellPath && !state.uri.path.startsWith('/paywall')) {
+        return '/paywall';
+      }
+
       return null;
     },
     routes: [
