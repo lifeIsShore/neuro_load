@@ -6,6 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:drift/drift.dart' show Value;
+
+import '../../data/app_database.dart';
+import '../../data/daos/session_dao.dart';
+import '../../data/tables.dart';
 import '../../theme/app_theme.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -29,6 +34,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // Page 4 – Intent Practice
   final TextEditingController _intentController = TextEditingController();
+
+  // Page 5 – Baseline Test
+  bool _baselineCompleted = false;
 
   // Typewriter effect
   String _typewriterText = '';
@@ -114,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       case 3:
         return _intentController.text.length >= 10;
       case 4:
-        return true;
+        return _baselineCompleted;
       case 5:
         return true;
       default:
@@ -192,7 +200,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       });
                     },
                   ),
-                  const _BaselineTestPage(),
+                  _BaselineTestPage(
+                    onCompleted: () => setState(() {
+                      _baselineCompleted = true;
+                      _canProceed = true;
+                    }),
+                  ),
                   const _FounderOathPage(),
                 ],
               ),
@@ -729,8 +742,122 @@ class _IntentPracticePage extends StatelessWidget {
 
 // ─── Page 5: Baseline Test ────────────────────────────────────────────────────
 
-class _BaselineTestPage extends StatelessWidget {
-  const _BaselineTestPage();
+enum _BaselinePhase { idle, running, done }
+
+class _BaselineTestPage extends StatefulWidget {
+  final VoidCallback onCompleted;
+
+  const _BaselineTestPage({required this.onCompleted});
+
+  @override
+  State<_BaselineTestPage> createState() => _BaselineTestPageState();
+}
+
+class _BaselineTestPageState extends State<_BaselineTestPage>
+    with SingleTickerProviderStateMixin {
+  static const _totalSeconds = 300; // 5 minutes
+
+  _BaselinePhase _phase = _BaselinePhase.idle;
+  int _remaining = _totalSeconds;
+  int _lapCount = 0;
+  int _sessionId = -1;
+  late int _startedAtMs;
+
+  Timer? _ticker;
+
+  late AnimationController _ringController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ringController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: _totalSeconds),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _ringController.dispose();
+    super.dispose();
+  }
+
+  // ── Timer control ──────────────────────────────────────────────────────────
+
+  Future<void> _begin() async {
+    _startedAtMs = DateTime.now().millisecondsSinceEpoch;
+
+    // Create the session row in Drift immediately
+    final dao = AppDatabase.instance.sessionDao;
+    _sessionId = await dao.insertSession(
+      SessionsCompanion.insert(
+        startedAt: _startedAtMs,
+        category: 'baseline',
+        subCategory: const Value(''),
+        intent: const Value('Baseline measurement session'),
+        baselineAimSeconds: const Value(_totalSeconds),
+      ),
+    );
+
+    setState(() => _phase = _BaselinePhase.running);
+    _ringController.forward(from: 0);
+
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _remaining--);
+      if (_remaining <= 0) _finish();
+    });
+  }
+
+  Future<void> _finish() async {
+    _ticker?.cancel();
+    _ringController.stop();
+
+    final elapsed = _totalSeconds - _remaining.clamp(0, _totalSeconds);
+    final quality = (100.0 - _lapCount * 10.0).clamp(0.0, 100.0);
+    final focusDensity = (_lapCount == 0
+        ? 1.0
+        : (elapsed - _lapCount * 30.0).clamp(0.0, elapsed.toDouble()) /
+            elapsed);
+    // 1RM = time until first distraction, or full elapsed if no laps
+    final oneRm = _lapCount == 0 ? elapsed : (elapsed ~/ (_lapCount + 1));
+
+    if (_sessionId != -1) {
+      await AppDatabase.instance.sessionDao.finishSession(
+        id: _sessionId,
+        endedAtMs: DateTime.now().millisecondsSinceEpoch,
+        qualityScore: quality,
+        focusDensity: focusDensity.clamp(0.0, 1.0),
+        oneRmSeconds: oneRm.clamp(0, elapsed),
+        totalElapsedSeconds: elapsed,
+        lapCount: _lapCount,
+      );
+    }
+
+    HapticFeedback.mediumImpact();
+    if (mounted) {
+      setState(() => _phase = _BaselinePhase.done);
+      widget.onCompleted();
+    }
+  }
+
+  void _logDistraction() {
+    HapticFeedback.heavyImpact();
+    setState(() => _lapCount++);
+  }
+
+  void _skip() => widget.onCompleted(); // No DB write
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  String _fmt(int s) {
+    final m = (s ~/ 60).toString().padLeft(2, '0');
+    final sec = (s % 60).toString().padLeft(2, '0');
+    return '$m:$sec';
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -748,43 +875,192 @@ class _BaselineTestPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Container(width: 40, height: 2, color: AppColors.teal),
-          const SizedBox(height: 24),
-          Text(
-            'Your first real session will establish your initial 1-Rep Max — '
-            'the longest you can focus without distraction.\n\n'
-            'Once you proceed to the app, start your first session and '
-            'focus for as long as you naturally can. Don\'t force it.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.8),
-          ),
-          const Spacer(),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceElevated,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.tealDim, width: 1),
+          const SizedBox(height: 16),
+
+          // Context text — only in idle
+          if (_phase == _BaselinePhase.idle)
+            Text(
+              'Your first real session establishes your initial 1-Rep Max — '
+              'the longest you can focus without distraction.\n\n'
+              'Run 5 minutes of focused work right now. '
+              'Tap "I Got Distracted" every time you lose focus. '
+              'Don\'t force it — just be honest.',
+              style:
+                  Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.8),
             ),
-            child: Column(
-              children: [
-                Text(
-                  '⏱',
-                  style: TextStyle(fontSize: 48),
+
+          const Spacer(),
+
+          // ── Central visual ────────────────────────────────────────────────
+          Center(child: _buildCentral(context)),
+          const SizedBox(height: 32),
+
+          // ── Primary action ────────────────────────────────────────────────
+          if (_phase == _BaselinePhase.idle)
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _begin,
+                child: const Text('BEGIN BASELINE'),
+              ),
+            ),
+
+          if (_phase == _BaselinePhase.running)
+            SizedBox(
+              width: double.infinity,
+              height: 72,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.surfaceElevated,
+                  foregroundColor: AppColors.textSecondary,
+                  side: const BorderSide(color: AppColors.silverGrayDim),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Your first session awaits.',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.teal,
+                onPressed: _logDistraction,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'I GOT DISTRACTED',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            letterSpacing: 2,
+                            color: AppColors.textSecondary,
+                          ),
+                    ),
+                    Text(
+                      '$_lapCount ${_lapCount == 1 ? 'lap' : 'laps'} logged',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── Skip link ─────────────────────────────────────────────────────
+          if (_phase != _BaselinePhase.done) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: GestureDetector(
+                onTap: _skip,
+                child: Text(
+                  'Skip baseline',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                        decoration: TextDecoration.underline,
                       ),
                 ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 32),
+          ],
+
+          const SizedBox(height: 24),
         ],
       ),
     );
+  }
+
+  Widget _buildCentral(BuildContext context) {
+    switch (_phase) {
+      // ── Idle ──────────────────────────────────────────────────────────────
+      case _BaselinePhase.idle:
+        return Container(
+          width: 160,
+          height: 160,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.tealDim, width: 1),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('⏱', style: TextStyle(fontSize: 44)),
+              const SizedBox(height: 8),
+              Text(
+                '5:00',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.teal,
+                  fontFeatures: [const FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+        );
+
+      // ── Running ───────────────────────────────────────────────────────────
+      case _BaselinePhase.running:
+        final progress = 1.0 - (_remaining / _totalSeconds).clamp(0.0, 1.0);
+        return SizedBox(
+          width: 190,
+          height: 190,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Progress ring
+              SizedBox.expand(
+                child: AnimatedBuilder(
+                  animation: _ringController,
+                  builder: (_, __) => CustomPaint(
+                    painter: _ArcPainter(progress: progress),
+                  ),
+                ),
+              ),
+              // Countdown text
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _fmt(_remaining),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: AppColors.teal,
+                      fontFeatures: [const FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  Text(
+                    'remaining',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+
+      // ── Done ───────────────────────────────────────────────────────────────
+      case _BaselinePhase.done:
+        final elapsed = _totalSeconds - _remaining.clamp(0, _totalSeconds);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                color: AppColors.tealDim,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.teal, width: 1),
+              ),
+              child: const Icon(Icons.check_rounded,
+                  size: 72, color: AppColors.teal),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Baseline recorded',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: AppColors.teal),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_fmt(elapsed)} focused · $_lapCount ${_lapCount == 1 ? 'distraction' : 'distractions'}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        );
+    }
   }
 }
 

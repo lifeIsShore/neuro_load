@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-03 (Dynamic Break Earning + Cloud Sync Wire-Up)  
+**Last Updated:** 2026-03-04 (Baseline Test Live Timer)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -21,7 +21,7 @@
 | MVP.000.002 | Lap Mechanic Tutorial | ✅ DONE | Interactive mock DISTRACTED button with haptic, tap-to-proceed logic in `_LapTutorialPage` |
 | MVP.000.003 | Sensor Calibration | ✅ DONE | `_SensorCalibrationPage` converted to `StatefulWidget` — 3-phase flow (idle → sampling → done), live `accelerometerEventStream` + 3-sample averaging, animated teal arc painter, `SharedPreferences.setDouble('sensor_z_baseline')` persisted on finish; Skip fallback for emulators. `FaceDownNotifier` reads the baseline at startup via `_loadThresholdThenSubscribe()` |
 | MVP.000.004 | Intent Statement Practice | ✅ DONE | Text input with 10-char minimum validation, in `_IntentPracticePage` |
-| MVP.000.005 | Baseline Test (5-min timer) | 🔨 PARTIAL | Page UI exists (`_BaselineTestPage`) but it is **informational only** — no embedded live timer, no session saved from onboarding |
+| MVP.000.005 | Baseline Test (5-min timer) | ✅ DONE | `_BaselineTestPage` converted to `StatefulWidget` — 3-phase flow (idle → running → done), live `MM:SS` countdown ring (5 min), "I Got Distracted" lap button with counter, `SessionDao.insertSession()` on begin + `finishSession()` on completion, quality/1RM computed from lap count; Skip link always visible (no DB write on skip) |
 | MVP.000.006 | Founder's Oath / Privacy Overview | ✅ DONE | Three privacy bullet points, "I Agree" button sets the onboarding flag and navigates to `/setup` |
 
 ---
