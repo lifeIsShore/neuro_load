@@ -141,12 +141,12 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // ── Heatmap ────────────────────────────────────────────────────
-              _SectionHeader('FOCUS HEATMAP · LAST 90 DAYS'),
+              _SectionHeader('24-HOUR FOCUS RING · ALL TIME'),
               const SizedBox(height: 12),
               sessionsAsync.when(
-                data: (sessions) => _FocusHeatmap(sessions: sessions),
-                loading: () => const _ChartSkeleton(height: 160),
-                error: (_, __) => const _ChartSkeleton(height: 160),
+                data: (sessions) => _CircularHeatmap(sessions: sessions),
+                loading: () => const _ChartSkeleton(height: 280),
+                error: (_, __) => const _ChartSkeleton(height: 280),
               ),
 
               const SizedBox(height: 32),
@@ -240,15 +240,285 @@ class _CoachInsightCard extends StatelessWidget {
   }
 }
 
-// ── Focus Heatmap ────────────────────────────────────────────────────────────
+// ── 24-Hour Circular Heatmap ─────────────────────────────────────────────────
+//
+// Each of the 24 arcs = one hour of the day.
+// Arc width   = scales with total focus minutes logged in that hour.
+// Arc opacity = same intensity, providing a dual encoding for accessibility.
+// Tap to toggle to the classic 90-day grid view.
 
-class _FocusHeatmap extends StatelessWidget {
+class _CircularHeatmap extends StatefulWidget {
   final List<Session> sessions;
-  const _FocusHeatmap({required this.sessions});
+  const _CircularHeatmap({required this.sessions});
+
+  @override
+  State<_CircularHeatmap> createState() => _CircularHeatmapState();
+}
+
+class _CircularHeatmapState extends State<_CircularHeatmap>
+    with SingleTickerProviderStateMixin {
+  bool _showGrid = false;
+  late final AnimationController _anim;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
+    _fade = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
+    _anim.forward();
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Build day buckets for last 90 days
+    // ── Bucket sessions by hour-of-day (total focus minutes) ──────────────
+    final hourMinutes = List<double>.filled(24, 0);
+    for (final s in widget.sessions) {
+      if (s.totalElapsedSeconds <= 0) continue;
+      final hour = DateTime.fromMillisecondsSinceEpoch(s.startedAt).hour;
+      hourMinutes[hour] += s.totalElapsedSeconds / 60.0;
+    }
+
+    final maxMins = hourMinutes.fold<double>(1, math.max);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _showGrid = !_showGrid);
+        _anim.forward(from: 0);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.silverGrayDim, width: 0.5),
+        ),
+        child: FadeTransition(
+          opacity: _fade,
+          child: _showGrid
+              ? _GridView(sessions: widget.sessions)
+              : _ClockRingView(
+                  hourMinutes: hourMinutes,
+                  maxMins: maxMins,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Clock Ring View ───────────────────────────────────────────────────────────
+
+class _ClockRingView extends StatelessWidget {
+  final List<double> hourMinutes;
+  final double maxMins;
+  const _ClockRingView({required this.hourMinutes, required this.maxMins});
+
+  @override
+  Widget build(BuildContext context) {
+    final peakHour = hourMinutes
+        .asMap()
+        .entries
+        .reduce((a, b) => a.value >= b.value ? a : b)
+        .key;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 220,
+          child: CustomPaint(
+            painter: _ClockRingPainter(
+              hourMinutes: hourMinutes,
+              maxMins: maxMins,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${peakHour.toString().padLeft(2, '0')}:00',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.teal,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                  ),
+                  Text(
+                    'peak hour',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.textTertiary,
+                          letterSpacing: 1.5,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // ── Hour axis legend ───────────────────────────────────────────────
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: ['00', '06', '12', '18', '23'].map((h) {
+            return Text(
+              h,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textTertiary,
+                    fontSize: 9,
+                  ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        // ── Intensity bar ─────────────────────────────────────────────────
+        Row(
+          children: [
+            Text('less',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: AppColors.textTertiary, fontSize: 9)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.teal.withValues(alpha: 0.1),
+                      AppColors.teal,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text('more',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: AppColors.textTertiary, fontSize: 9)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap to switch to 90-day grid',
+          style: Theme.of(context)
+              .textTheme
+              .labelSmall
+              ?.copyWith(color: AppColors.textTertiary, fontSize: 9),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Clock Ring Painter ────────────────────────────────────────────────────────
+
+class _ClockRingPainter extends CustomPainter {
+  final List<double> hourMinutes;
+  final double maxMins;
+
+  const _ClockRingPainter({
+    required this.hourMinutes,
+    required this.maxMins,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final outerRadius = math.min(size.width, size.height) / 2 - 4;
+    const bandMin = 18.0; // thinnest arc width for zero-minute hours
+    final bandMax = outerRadius * 0.45; // thickest arc width
+
+    const sweepPerHour = (2 * math.pi) / 24;
+    // Start at top (12 o'clock = -π/2)
+    const startOffset = -math.pi / 2;
+    // Small gap between segments (in radians)
+    const gapRad = 0.025;
+
+    for (int h = 0; h < 24; h++) {
+      final intensity =
+          maxMins > 0 ? (hourMinutes[h] / maxMins).clamp(0.0, 1.0) : 0.0;
+
+      final startAngle = startOffset + h * sweepPerHour + gapRad / 2;
+      final sweep = sweepPerHour - gapRad;
+
+      // Arc thickness grows with intensity
+      final thickness = bandMin + (bandMax - bandMin) * intensity;
+      final innerR = outerRadius - thickness;
+
+      final alpha = 0.15 + 0.85 * intensity;
+      final paint = Paint()
+        ..color = AppColors.teal.withValues(alpha: alpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness
+        ..strokeCap = StrokeCap.butt;
+
+      final arcRadius = (innerR + outerRadius) / 2;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: arcRadius),
+        startAngle,
+        sweep,
+        false,
+        paint,
+      );
+
+      // Bright dot at peak hour
+      if (intensity >= 1.0) {
+        final midAngle = startAngle + sweep / 2;
+        final dotPos = Offset(
+          center.dx + arcRadius * math.cos(midAngle),
+          center.dy + arcRadius * math.sin(midAngle),
+        );
+        canvas.drawCircle(
+          dotPos,
+          3,
+          Paint()..color = Colors.white.withValues(alpha: 0.9),
+        );
+      }
+    }
+
+    // ── Tick marks for 00, 06, 12, 18 ──────────────────────────────────────
+    final tickPaint = Paint()
+      ..color = AppColors.textTertiary.withValues(alpha: 0.4)
+      ..strokeWidth = 1;
+    for (final h in [0, 6, 12, 18]) {
+      final angle = startOffset + h * sweepPerHour;
+      final p1 = Offset(
+        center.dx + (outerRadius + 2) * math.cos(angle),
+        center.dy + (outerRadius + 2) * math.sin(angle),
+      );
+      final p2 = Offset(
+        center.dx + (outerRadius + 8) * math.cos(angle),
+        center.dy + (outerRadius + 8) * math.sin(angle),
+      );
+      canvas.drawLine(p1, p2, tickPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ClockRingPainter old) =>
+      old.hourMinutes != hourMinutes || old.maxMins != maxMins;
+}
+
+// ── Fallback 90-Day Grid View ─────────────────────────────────────────────────
+
+class _GridView extends StatelessWidget {
+  final List<Session> sessions;
+  const _GridView({required this.sessions});
+
+  @override
+  Widget build(BuildContext context) {
     final now = DateTime.now();
     final dayBuckets = <String, int>{};
     for (final s in sessions) {
@@ -258,57 +528,55 @@ class _FocusHeatmap extends StatelessWidget {
       dayBuckets[key] = (dayBuckets[key] ?? 0) + 1;
     }
 
-    const cols = 13; // ~13 weeks
-    const rows = 7; // 7 days
+    const cols = 13;
+    const rows = 7;
 
-    return Container(
-      height: 160,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.silverGrayDim, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Each cell = one day',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                crossAxisSpacing: 3,
-                mainAxisSpacing: 3,
-              ),
-              itemCount: cols * rows,
-              itemBuilder: (context, index) {
-                final dayOffset = (cols * rows) - 1 - index;
-                final day = now.subtract(Duration(days: dayOffset));
-                final key =
-                    '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-                final count = dayBuckets[key] ?? 0;
-
-                final intensity =
-                    count == 0 ? 0.0 : (count / 4).clamp(0.2, 1.0).toDouble();
-
-                return Container(
-                  decoration: BoxDecoration(
-                    color: count == 0
-                        ? AppColors.silverGrayDim.withValues(alpha: 0.15)
-                        : AppColors.teal.withValues(alpha: intensity),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                );
-              },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Last 90 days · each cell = one day',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 130,
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: cols,
+              crossAxisSpacing: 3,
+              mainAxisSpacing: 3,
             ),
+            itemCount: cols * rows,
+            itemBuilder: (context, index) {
+              final dayOffset = (cols * rows) - 1 - index;
+              final day = now.subtract(Duration(days: dayOffset));
+              final key =
+                  '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+              final count = dayBuckets[key] ?? 0;
+              final intensity = count == 0 ? 0.0 : (count / 4).clamp(0.2, 1.0);
+              return Container(
+                decoration: BoxDecoration(
+                  color: count == 0
+                      ? AppColors.silverGrayDim.withValues(alpha: 0.15)
+                      : AppColors.teal.withValues(alpha: intensity),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap to switch to 24-hour ring',
+          style: Theme.of(context)
+              .textTheme
+              .labelSmall
+              ?.copyWith(color: AppColors.textTertiary, fontSize: 9),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-04 (Android Foreground Service — US 7.5)  
+**Last Updated:** 2026-03-04 (24-Hour Circular Heatmap — MVP.002.001)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -51,7 +51,7 @@
 
 | Story | Title | Status | Notes |
 |-------|-------|--------|-------|
-| MVP.002.001 | Focus Heatmap (daily grid) | 🔨 PARTIAL | 90-day GitHub-style grid heatmap implemented (`_FocusHeatmap`); **not the spec's 24-hour circular heatmap** — uses day count, no daily/weekly/monthly toggle |
+| MVP.002.001 | 24-Hour Circular Focus Ring | ✅ DONE | Old 90-day grid replaced with `_CircularHeatmap` — 24-segment clock ring `CustomPainter`; arc width + opacity scale with total focus minutes per hour; peak-hour label in center; intensity gradient legend; tap to toggle to 90-day `_GridView` fallback; fade-in animation via `AnimationController`; no new deps |
 | MVP.002.002 | 1RM Tracking | ✅ DONE | `allTimeOneRmProvider` queries DB; KPI card shows all-time 1RM; line chart `_OneRMLineChart` shows 1RM progression over sessions |
 | MVP.002.003 | Distraction Trigger Breakdown | ✅ DONE | `_DistractionDoughnut` pie/donut chart via `fl_chart`; uses `triggerCountMapProvider`; handles empty state |
 | MVP.002.004 | Category-Specific Analytics Filter | ✅ DONE | `categoryFilterProvider` StateProvider drives filtered DAO queries; horizontal `ChoiceChip` row (All/Study/Work/Creative/Admin/Lifestyle) in Dashboard; all KPI cards, heatmap, donut, and 1RM chart react to filter changes |
