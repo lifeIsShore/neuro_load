@@ -19,7 +19,7 @@ const _storageKey = 'neuro_db_key';
 @DriftDatabase(
     tables: [Sessions, Laps, AppSettings], daos: [SessionDao, LapDao])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase._internal(QueryExecutor executor) : super(executor);
+  AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   static AppDatabase? _instance;
   static AppDatabase get instance {
@@ -30,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   static Future<AppDatabase> initialize() async {
     if (_instance != null) return _instance!;
     final executor = await _buildExecutor();
-    _instance = AppDatabase._internal(executor);
+    _instance = AppDatabase.forTesting(executor);
     return _instance!;
   }
 

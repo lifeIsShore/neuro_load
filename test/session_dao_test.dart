@@ -3,14 +3,13 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:neuro_load/data/app_database.dart';
-import 'package:neuro_load/data/tables.dart';
 
 // ---------------------------------------------------------------------------
 // Helper: opens an in-memory database (no encryption, no file I/O needed).
 // ---------------------------------------------------------------------------
 AppDatabase _openTestDb() {
   final executor = NativeDatabase.memory();
-  return AppDatabase._internal(executor);
+  return AppDatabase.forTesting(executor);
 }
 
 void main() {
@@ -63,8 +62,9 @@ void main() {
         isCompleted: const Value(true),
       ));
       final incompleteId = await db.sessionDao.insertSession(SessionsCompanion(
-        startedAt:
-            Value(DateTime.now().add(const Duration(seconds: 1)).millisecondsSinceEpoch),
+        startedAt: Value(DateTime.now()
+            .add(const Duration(seconds: 1))
+            .millisecondsSinceEpoch),
         category: const Value('admin'),
       ));
 
