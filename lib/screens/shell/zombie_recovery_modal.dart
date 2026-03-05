@@ -69,12 +69,12 @@ class _ZombieRecoveryModalState extends State<ZombieRecoveryModal>
           color: const Color(0xFF141414),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: const Color(0xFF505050).withOpacity(0.5),
+            color: const Color(0xFF505050).withValues(alpha: 0.5),
             width: 0.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               blurRadius: 40,
               spreadRadius: 8,
             ),
@@ -97,7 +97,8 @@ class _ZombieRecoveryModalState extends State<ZombieRecoveryModal>
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE53E3E).withOpacity(0.12),
+                          color:
+                              const Color(0xFFE53E3E).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -129,7 +130,7 @@ class _ZombieRecoveryModalState extends State<ZombieRecoveryModal>
                   color: const Color(0xFF1E1E1E),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF505050).withOpacity(0.4),
+                    color: const Color(0xFF505050).withValues(alpha: 0.4),
                     width: 0.5,
                   ),
                 ),

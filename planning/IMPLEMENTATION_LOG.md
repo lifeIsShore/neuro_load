@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-05 (Sprint 4 complete + beta polish fixes applied)
+**Last Updated:** 2026-03-05 (Sprint 4 complete + CI/CD Audit + beta polish fixes applied)
 **Author:** AI Engineering Assistant
 **Purpose:** Single source of truth for implementation status, audit findings, and sprint tasks.
 
@@ -243,6 +243,7 @@ Full checklist: `planning/S4-001-STRIPE-SETUP.md`
 | Fake sub-category chips removed | `setup_screen.dart` | Hardcoded `['Deep Work', 'Research', ...]` list replaced with `[]`. Chip row renders nothing until S5-001 ships real DB lookup. |
 | Android app label fixed | `AndroidManifest.xml` | `android:label` changed from `neuro_load` to `NeuroLoad`. |
 | Timezone init hardened | `notification_service.dart` | `getLocalTimezone()` wrapped in try/catch. Falls back to UTC if platform channel fails (emulators, some Android 12 cold starts). Prevents silent daily reminder scheduling failure. |
+| CI/CD Audit & Fixes | Global | **Flutter 3.41+ Migration.** Refactored 57 deprecated `withOpacity` calls to `withValues(alpha: ...)`. Resolved `prefer_const_constructors` in paywall. Secured `assets/` directories via `.gitkeep`. `flutter analyze` is now clean. |
 
 ---
 
@@ -282,10 +283,17 @@ Full checklist: `planning/S4-001-STRIPE-SETUP.md`
 **Current Capabilities:**
 - [x] **Manual Trigger**: Workflow can be started via GitHub Actions UI.
 - [x] **Debug APK**: On-demand artifact available for instant device testing (no signing required).
-- [x] **Build Fixes applied**: `withValues` refactored to `withOpacity` for CI compatibility; `prefer_const_constructors` fixed; unused imports removed.
+- [x] **Build Fixes applied**: Refactored 57 deprecated `withOpacity` calls to `withValues` (Flutter 3.41+ compatibility); `prefer_const_constructors` fixed; missing asset directories secured via `.gitkeep`. Build is now green (`No issues found!`).
 - [ ] **Production Secrets**: Needs 4 GitHub secrets for Release builds (`KEYSTORE_BASE64`, etc.).
 
 **Guide Created:** `brain/ci_cd_guide.md`
+
+### 🛠️ Developer Audit Notes (2026-03-05)
+Recent CI failures and deprecation spikes were caused by the jump to Flutter 3.41. The follow fixes were applied to secure the build:
+1. **Color API Migration:** `withOpacity` is now deprecated. Use `withValues(alpha: 0.x)` instead. This touched 57 files (Dashboard, Timer, Shell, etc.).
+2. **Switch Parameters:** Verified `Switch.activeThumbColor` usage (replaces deprecated `activeColor` logic in newer Material specs).
+3. **Asset Visibility:** Assets directories (`fonts/`, `images/`) were empty/untracked, causing build warnings. Added `.gitkeep` to ensure structure persists in CI runners.
+4. **Linting:** Fixed `prefer_const_constructors` in `paywall_screen.dart` to satisfy strict CI analysis.
 
 ---
 

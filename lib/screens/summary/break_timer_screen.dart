@@ -198,14 +198,14 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? AppColors.restAccent
-                                              .withOpacity(0.18)
+                                              .withValues(alpha: 0.18)
                                           : AppColors.restSurface,
                                       borderRadius: BorderRadius.circular(100),
                                       border: Border.all(
                                         color: isSelected || isEarned
                                             ? AppColors.restAccent
                                             : AppColors.restAccent
-                                                .withOpacity(0.2),
+                                                .withValues(alpha: 0.2),
                                         width: isSelected ? 1.5 : 0.5,
                                       ),
                                     ),
@@ -218,7 +218,7 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                                             color: isSelected
                                                 ? AppColors.restAccent
                                                 : AppColors.restText
-                                                    .withOpacity(0.6),
+                                                    .withValues(alpha: 0.6),
                                             fontWeight: isEarned
                                                 ? FontWeight.w700
                                                 : FontWeight.normal,
@@ -248,7 +248,7 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                           child: CircularProgressIndicator(
                             value: 1.0,
                             strokeWidth: 4,
-                            color: AppColors.restAccent.withOpacity(0.12),
+                            color: AppColors.restAccent.withValues(alpha: 0.12),
                           ),
                         ),
                         // Progress ring
@@ -285,7 +285,8 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                                   .textTheme
                                   .labelSmall
                                   ?.copyWith(
-                                    color: AppColors.restText.withOpacity(0.5),
+                                    color: AppColors.restText
+                                        .withValues(alpha: 0.5),
                                     letterSpacing: 3,
                                   ),
                             ),
@@ -304,13 +305,13 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                       color: AppColors.restSurface,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: AppColors.restAccent.withOpacity(0.15)),
+                          color: AppColors.restAccent.withValues(alpha: 0.15)),
                     ),
                     child: Text(
                       '💡  Walk, stretch, or breathe deeply. '
                       'Consolidation happens during rest.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.restText.withOpacity(0.7),
+                            color: AppColors.restText.withValues(alpha: 0.7),
                             height: 1.5,
                           ),
                       textAlign: TextAlign.center,
@@ -340,9 +341,11 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                       height: 56,
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.restText.withOpacity(0.6),
+                          foregroundColor:
+                              AppColors.restText.withValues(alpha: 0.6),
                           side: BorderSide(
-                              color: AppColors.restAccent.withOpacity(0.3)),
+                              color:
+                                  AppColors.restAccent.withValues(alpha: 0.3)),
                         ),
                         onPressed: _skip,
                         child: const Text('SKIP REST'),
@@ -356,10 +359,13 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
                         onPressed: _skip,
                         child: Text(
                           'Skip — go straight to training',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.restText.withOpacity(0.4),
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color:
+                                    AppColors.restText.withValues(alpha: 0.4),
+                              ),
                         ),
                       ),
                     ),

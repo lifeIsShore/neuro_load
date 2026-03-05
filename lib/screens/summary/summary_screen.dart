@@ -238,9 +238,10 @@ class _EarnedBreakBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.teal.withOpacity(0.08),
+        color: AppColors.teal.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.teal.withOpacity(0.3), width: 1),
+        border:
+            Border.all(color: AppColors.teal.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -248,7 +249,7 @@ class _EarnedBreakBanner extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.teal.withOpacity(0.15),
+              color: AppColors.teal.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.bedtime_outlined,
@@ -323,7 +324,7 @@ class _QualityScoreCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         children: [
@@ -351,7 +352,7 @@ class _QualityScoreCard extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                   letterSpacing: 4,
                 ),
           ),

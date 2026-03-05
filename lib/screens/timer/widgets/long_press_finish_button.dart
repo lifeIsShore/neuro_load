@@ -79,7 +79,7 @@ class _LongPressFinishButtonState extends State<LongPressFinishButton>
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: _holding
-                        ? AppColors.teal.withOpacity(_controller.value)
+                        ? AppColors.teal.withValues(alpha: _controller.value)
                         : AppColors.silverGrayDim,
                     width: 1,
                   ),
@@ -115,7 +115,7 @@ class _ProgressRingPainter extends CustomPainter {
     if (!isHolding || progress == 0) return;
 
     final paint = Paint()
-      ..color = AppColors.teal.withOpacity(0.5)
+      ..color = AppColors.teal.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;

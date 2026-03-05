@@ -70,7 +70,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: AppColors.teal.withOpacity(0.4), width: 1),
+                      color: AppColors.teal.withValues(alpha: 0.4), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,10 +80,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.teal.withOpacity(0.15),
+                        color: AppColors.teal.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(100),
                         border: Border.all(
-                          color: AppColors.teal.withOpacity(0.4),
+                          color: AppColors.teal.withValues(alpha: 0.4),
                           width: 0.5,
                         ),
                       ),
@@ -155,12 +155,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               // and explains to use a voucher code instead.
               // Re-enable by setting _betaMode = false before public launch.
               if (isPaid)
-                SizedBox(
+                const SizedBox(
                   width: double.infinity,
                   height: 60,
                   child: ElevatedButton(
                     onPressed: null,
-                    child: const Text('UNLOCKED \u2713'),
+                    child: Text('UNLOCKED \u2713'),
                   ),
                 )
               else if (_betaMode)
@@ -192,12 +192,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 )
               else
                 // Production CTA — restore full _launchStripeCheckout() here
-                SizedBox(
+                const SizedBox(
                   width: double.infinity,
                   height: 60,
                   child: ElevatedButton(
                     onPressed: null, // wire to _launchStripeCheckout
-                    child: const Text('UNLOCK NEUROLOAD \u2014 \u20ac49'),
+                    child: Text('UNLOCK NEUROLOAD \u2014 \u20ac49'),
                   ),
                 ),
 

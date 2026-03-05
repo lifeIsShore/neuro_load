@@ -56,9 +56,8 @@ class _DistractionModalState extends State<DistractionModal> {
     //   2. The user has NOT already selected a trigger (didn’t interact).
     // This prevents the ghost flash when the user tapped a trigger but the
     // timer still fired before the note screen closed.
-    final shouldFlash = !_userActed &&
-        widget.intent != null &&
-        widget.intent!.isNotEmpty;
+    final shouldFlash =
+        !_userActed && widget.intent != null && widget.intent!.isNotEmpty;
 
     if (shouldFlash) {
       setState(() => _flashing = true);
@@ -138,8 +137,8 @@ class _DistractionModalState extends State<DistractionModal> {
               builder: (context, value, _) => LinearProgressIndicator(
                 value: value,
                 backgroundColor: AppColors.surfaceElevated,
-                valueColor:
-                    AlwaysStoppedAnimation(AppColors.teal.withOpacity(0.7)),
+                valueColor: AlwaysStoppedAnimation(
+                    AppColors.teal.withValues(alpha: 0.7)),
                 minHeight: 2,
               ),
             ),
