@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme/app_theme.dart';
+import '../../services/notification_service.dart';
 
 // ── Static presets (user can override after seeing their earned time) ─────────
 
@@ -96,6 +97,9 @@ class _BreakTimerScreenState extends ConsumerState<BreakTimerScreen>
 
   void _onComplete() {
     HapticFeedback.heavyImpact();
+    // S4-006: fire the break-complete notification so the user is alerted
+    // even if the app is backgrounded or the screen is off.
+    NotificationService.showRestComplete();
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) context.go('/setup');
     });

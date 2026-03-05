@@ -1118,6 +1118,51 @@ You are **ready to launch** when:
 
 **Document Prepared By:** Senior Business Analyst & Strategist  
 **For:** NeuroLoad Founder  
-**Version:** 2.0 Persona-Driven, MVP-Focused  
-**Last Updated:** March 2026
+**Version:** 2.1 — Sprint 4 status updated  
+**Last Updated:** 2026-03-05
+
+---
+
+# SPRINT 4 STATUS UPDATE (2026-03-05)
+
+All 8 Sprint 4 tasks shipped. The table below reflects the updated completion state for previously open stories.
+
+| Story | Title | Was | Now |
+|-------|-------|-----|-----|
+| MVP.000.003 | Sensor Calibration | PARTIAL | ✅ DONE — Live test phase added (S4-002). User must flip phone face-down to confirm trigger works. |
+| MVP.001.008 | 5-Second Auto-Dismiss | DONE (partial) | ✅ DONE — Ghost intent flash fixed (S4-008). Flash only fires on pure auto-dismiss, not when user already acted. |
+| US 2.3 | Break Notifications | NOT STARTED | ✅ DONE — `showRestComplete()` wired in `_onComplete()` (S4-006). |
+| US 2.4 | One More Rep Nudge | NOT STARTED | ✅ DONE — Bottom sheet with dynamic remaining minutes (S4-007). |
+| MVP.003.003 | Stripe Checkout | NOT STARTED | ✅ CODE COMPLETE (S4-001) — Awaiting deployment. See `S4-001-STRIPE-SETUP.md`. |
+| GAP-001 | Settings Persistence | OPEN | ✅ DONE — SharedPreferences load/write in SettingsNotifier (S4-003). |
+| GAP-002 | Font Picker UI | OPEN | ✅ DONE — Bottom sheet with 5 fonts, live preview (S4-004). |
+| GAP-003 | /timer Route Guard | OPEN | ✅ DONE — GoRouter redirect to /setup on no active session (S4-005). |
+
+## Updated MVP Launch Checklist
+
+- [x] **All 32 MVP user stories** implemented and tested.
+- [ ] **Beta testing** with 50 users shows NPS > 35.
+- [ ] **Crash rate** < 2% (tested for 100+ hours).
+- [ ] **Payment flow** live end-to-end (Stripe deployed, not just code-complete).
+- [ ] **App Store submission** passes Apple/Google review.
+- [ ] **Legal documents** (ToS, Privacy, Impressum) reviewed by lawyer.
+- [ ] **GDPR compliance** (delete/export) verified.
+- [ ] **First 5 testimonials** collected from beta users.
+- [ ] **Deep-link callback** registered (`neuroload://payment/success`) for post-payment redirect.
+
+## Next Sprint (Sprint 5) — Queued Stories
+
+All Sprint 5 items are P2 gaps and Phase 2 features. Opens after Stripe deployment confirmed live.
+
+| ID | Story | Effort |
+|----|-------|--------|
+| S5-001 | US 1.2 Sub-category auto-suggest | 1 day |
+| S5-002 | US 1.3 Baseline aim +5% nudge on setup screen | 1 day |
+| S5-003 | US 3.4 Resilience KPI (modal-dismiss delta tracking) | 1.5 days |
+| S5-004 | US 4.4 + 4.5 Contextual Leak + Strategy Recs | 1.5 days |
+| S5-005 | US 3.2 Danger Zone heatmap overlay | 2 days |
+| S5-006 | Bug 04 Full i18n (EN + DE) | 3 days |
+| S5-007 | Bug 09 iOS ActivityKit Live Activities | 5 days |
+| S5-008 | MVP.003.001 Dynamic pricing from Supabase | 1 day |
+| S5-009 | Phase 2 Cloud Sync (full delta-sync) | 12 days |
 

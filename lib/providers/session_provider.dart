@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/app_database.dart';
 import '../data/database_providers.dart';
@@ -458,15 +459,52 @@ class AppSettings {
 }
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
-  SettingsNotifier() : super(const AppSettings());
+  SettingsNotifier() : super(const AppSettings()) {
+    _loadSettings();
+  }
 
-  void toggleHighContrast() =>
-      state = state.copyWith(highContrast: !state.highContrast);
-  void toggleLocalOnlyNotes() =>
-      state = state.copyWith(localOnlyNotes: !state.localOnlyNotes);
-  void toggleCloudSync() =>
-      state = state.copyWith(cloudSyncEnabled: !state.cloudSyncEnabled);
-  void setFont(String family) => state = state.copyWith(fontFamily: family);
+  // ── Preference keys ──────────────────────────────────────────────────────
+  static const _kHighContrast    = 'settings_high_contrast';
+  static const _kLocalOnlyNotes  = 'settings_local_only_notes';
+  static const _kCloudSync       = 'settings_cloud_sync';
+  static const _kFontFamily      = 'settings_font_family';
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = AppSettings(
+      highContrast:    prefs.getBool(_kHighContrast)   ?? false,
+      localOnlyNotes:  prefs.getBool(_kLocalOnlyNotes) ?? true,
+      cloudSyncEnabled: prefs.getBool(_kCloudSync)     ?? false,
+      fontFamily:      prefs.getString(_kFontFamily)   ?? 'Inter',
+    );
+  }
+
+  Future<void> toggleHighContrast() async {
+    final next = !state.highContrast;
+    state = state.copyWith(highContrast: next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kHighContrast, next);
+  }
+
+  Future<void> toggleLocalOnlyNotes() async {
+    final next = !state.localOnlyNotes;
+    state = state.copyWith(localOnlyNotes: next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kLocalOnlyNotes, next);
+  }
+
+  Future<void> toggleCloudSync() async {
+    final next = !state.cloudSyncEnabled;
+    state = state.copyWith(cloudSyncEnabled: next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kCloudSync, next);
+  }
+
+  Future<void> setFont(String family) async {
+    state = state.copyWith(fontFamily: family);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kFontFamily, family);
+  }
 }
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>(

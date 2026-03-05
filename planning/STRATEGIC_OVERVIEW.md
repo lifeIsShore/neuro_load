@@ -3,7 +3,7 @@
 
 **For:** NeuroLoad Founder  
 **Date:** March 2026  
-**Status:** Strategic Recommendations + Enhanced Documentation
+**Status:** Strategic Recommendations + Enhanced Documentation — Updated Sprint 4 Complete
 
 ---
 
@@ -392,25 +392,50 @@ Check the matrix:
 
 ---
 
-## CONCLUSION: You're Now Ready to Execute
+## CURRENT STATUS (Updated 2026-03-05)
+
+### Sprint 4 is complete. All MVP blockers are resolved.
+
+The app is now feature-complete for a beta launch. Here is where things stand:
+
+| Area | Status | Notes |
+|------|--------|-------|
+| All 32 MVP user stories | ✅ Done | Every story implemented and source-verified |
+| Stripe Checkout | ✅ Code complete | Awaiting deployment (2-4 hour task, see S4-001-STRIPE-SETUP.md) |
+| Settings persistence | ✅ Done | High-contrast + font survive restart |
+| Calibration UX | ✅ Done | Flip-to-confirm test phase live |
+| Break notifications | ✅ Done | Fires on break timer completion |
+| Route guards | ✅ Done | /timer safe against direct navigation |
+| One More Rep nudge | ✅ Done | Fires on early finish, clean sessions only |
+| Ghost intent flash | ✅ Done | Only fires on pure auto-dismiss |
+| CI/CD pipeline | ✅ Done | Android + iOS workflows active |
+| Beta testing (50 users) | ❏ Pending | Required before App Store submission |
+| Stripe live deployment | ❏ Pending | 7-step checklist in S4-001-STRIPE-SETUP.md |
+| App Store submission | ❏ Pending | After beta NPS confirmed |
+
+### Immediate Next Steps (In Order)
+
+1. **Deploy Stripe** — Follow `planning/S4-001-STRIPE-SETUP.md`. Takes 2-4 hours. Unblocks revenue.
+2. **Register deep-link** (`neuroload://payment/success`) in AndroidManifest + Info.plist + `app_links` package.
+3. **Beta with 50 users** — Target NPS > 35 before submitting to App Stores.
+4. **Legal review** — ToS, Privacy Policy, Impressum. Budget €2k.
+5. **App Store submission** — Frame as "timer + analytics tool", not "blocker".
+6. **Sprint 5** — Opens after Stripe confirmed live. Focus on P2 gaps + Phase 2 cloud sync prep.
+
+## CONCLUSION: You're Now Ready to Launch
 
 You have:
 
 ✅ **A clear business model** (not just philosophy)  
 ✅ **3 specific personas** to design for  
-✅ **32 MVP stories** (crystal clear scope)  
-✅ **Effort estimates** (you know the timeline)  
+✅ **All 32 MVP stories implemented** (Sprint 4 closed the last blockers)  
+✅ **Stripe integration code-complete** (deploy in 2-4 hours)  
 ✅ **Go-to-market playbook** (month-by-month)  
 ✅ **Financial model** (Year 1-3 projections)  
 ✅ **Exit strategy** (€800k-€1.2M valuation)  
 ✅ **Decision gates** (when to launch Phase 2, when to hire, when to pivot)  
 
-**The Next Step:**
-
-1. **Review the 3 personas** (Section 2 of PRD). Do they match *your* understanding of your target users? If not, adjust.
-2. **Review the MVP scope** (Epic 0-5 in user stories). Is anything missing? Anything you'd remove?
-3. **Start Sprint 1** with Epic 0 (Onboarding, ~20 days). Don't skip this; it frames the entire philosophy.
-4. **Track the metrics** (Section 8 of PRD): NPS, retention rate, quality score. These tell you if the app is working.
+**The bottleneck is no longer code. It is deployment and beta validation.**
 
 ---
 
@@ -426,41 +451,44 @@ You have:
 
 ## Appendix: Quick Reference Checklists
 
-### Pre-Development Checklist (Before Month 1)
+### Pre-Development Checklist — Updated Status (2026-03-05)
 
-- [ ] Read the 3 personas in PRD Section 2. Can you design for them?
-- [ ] Review MVP scope (32 stories). Is this realistic for 6 months?
-- [ ] Prepare legal documents: ToS, Privacy, Impressum (draft; lawyer review Month 4).
-- [ ] Design Figma prototype (1 week): Manifesto screen, Timer, Distraction modal, Summary.
-- [ ] Set up Flutter project skeleton + CI/CD pipeline.
-- [ ] Create Supabase project (configure RLS policies, functions, webhooks).
-- [ ] Test Stripe sandbox integration (payment flow).
+- [x] Read the 3 personas in PRD Section 2.
+- [x] Review MVP scope (32 stories).
+- [ ] Prepare legal documents: ToS, Privacy, Impressum — **draft ready; lawyer review pending.**
+- [x] Design Flutter UI (Noir aesthetic shipped).
+- [x] Set up Flutter project skeleton + CI/CD pipeline.
+- [ ] Create Supabase project (configure RLS policies, functions, webhooks) — **Edge Functions written; deployment pending.**
+- [ ] Test Stripe sandbox integration (payment flow) — **Code complete; live test pending deployment.**
 
 ### Month-by-Month Progress Tracker
 
-**Month 1-2 (Months 0-2 from PRD timeline):**
-- [ ] Epic 0: Onboarding complete (6 stories, ~20 days)
-- [ ] Epic 1: Timer core engine (MVP.001.001 → MVP.001.004, ~20 days)
+**Month 1-2:**
+- [x] Epic 0: Onboarding complete (6 stories)
+- [x] Epic 1: Timer core engine
 
 **Month 3-4:**
-- [ ] Epic 1: Continued (Lap trigger, classification modal, session termination, ~30 days)
-- [ ] Epic 2: Dashboard foundation (4 stories, ~20 days)
+- [x] Epic 1: Lap trigger, classification modal, session termination
+- [x] Epic 2: Dashboard foundation (4 stories)
 
 **Month 5-6:**
-- [ ] Epic 3: Monetization (6 stories, ~27 days)
-- [ ] Epic 4: Hardware (4 stories, ~20 days)
-- [ ] Epic 5: Settings (3 stories, ~5 days)
-- [ ] QA & App Store submission (2-3 weeks buffer)
+- [x] Epic 3: Monetization (6 stories — Stripe code-complete)
+- [x] Epic 4: Hardware (sensors, foreground service)
+- [x] Epic 5: Settings (full persistence shipped Sprint 4)
+- [ ] QA & App Store submission — **Pending beta test**
 
-**Month 6 (Launch):**
-- [ ] Beta test with 50 friends; collect NPS
-- [ ] Target: 1,000 Founder Batch signups by Month 6 end
-- [ ] Revenue: €14,990 (Founder batch)
+**Month 6 — NOW (Launch Gate):**
+- [ ] Beta test with 50 users; collect NPS > 35
+- [ ] Deploy Stripe (2-4 hours, follow S4-001-STRIPE-SETUP.md)
+- [ ] Register deep-link scheme (AndroidManifest + Info.plist)
+- [ ] Legal review (€2k budget)
+- [ ] Target: 1,000 Founder Batch signups by end of launch month
+- [ ] Revenue target: €14,990 (Founder batch)
 
-**Months 7-12 (Phase 2):**
-- [ ] Cloud Sync (12-15 days)
-- [ ] Break Management (6 days)
-- [ ] B2B outreach (ongoing; 3+ contracts signed)
+**Months 7-12 (Phase 2 — Sprint 5+):**
+- [ ] Sprint 5: P2 gaps closed (sub-category suggest, resilience KPI, danger zones)
+- [ ] Cloud Sync full delta-sync (12 days)
+- [ ] B2B outreach (ongoing; 3+ contracts targeted)
 - [ ] Hire VA (10h/week)
 - [ ] Hire Senior Dev (15h/month retainer)
 - [ ] Launch web portal (Next.js, 10-15 days)

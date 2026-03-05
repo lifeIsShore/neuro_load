@@ -26,7 +26,12 @@ class _DistractionModalState extends State<DistractionModal> {
   DistractionTrigger? _selectedTrigger;
   final TextEditingController _noteController = TextEditingController();
   bool _showNote = false;
+  // S4-008: _flashing is only set true when the auto-dismiss fires AND the
+  // user has NOT already selected a trigger. This prevents a ghost flash
+  // when the user is mid-selection or when the modal is auto-dismissed.
   bool _flashing = false;
+  // Tracks whether the user has actively interacted with the modal.
+  bool _userActed = false;
 
   @override
   void initState() {
@@ -40,15 +45,24 @@ class _DistractionModalState extends State<DistractionModal> {
       setState(() => _remaining--);
       if (_remaining <= 0) {
         t.cancel();
-        _flashIntent();
+        _autoDismiss();
       }
     });
   }
 
-  void _flashIntent() async {
-    if (widget.intent != null && widget.intent!.isNotEmpty) {
+  void _autoDismiss() async {
+    // S4-008: Only show the intent flash on auto-dismiss if:
+    //   1. There is a non-empty intent string, AND
+    //   2. The user has NOT already selected a trigger (didn’t interact).
+    // This prevents the ghost flash when the user tapped a trigger but the
+    // timer still fired before the note screen closed.
+    final shouldFlash = !_userActed &&
+        widget.intent != null &&
+        widget.intent!.isNotEmpty;
+
+    if (shouldFlash) {
       setState(() => _flashing = true);
-      await Future.delayed(const Duration(milliseconds: 1500));
+      await Future.delayed(const Duration(milliseconds: 1200));
     }
     if (mounted) Navigator.pop(context);
     widget.onTriggerSelected(
@@ -62,6 +76,7 @@ class _DistractionModalState extends State<DistractionModal> {
     setState(() {
       _selectedTrigger = trigger;
       _showNote = true;
+      _userActed = true; // S4-008: mark user interaction
     });
     HapticFeedback.selectionClick();
   }

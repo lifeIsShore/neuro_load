@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'providers/session_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/setup/setup_screen.dart';
@@ -24,6 +25,17 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!hasOnboarded && !state.uri.path.startsWith('/onboarding')) {
         return '/onboarding';
+      }
+
+      // S4-005: /timer route guard.
+      // If the user navigates directly to /timer (deep link, hot-reload, etc.)
+      // with no active session, redirect to /setup instead of showing a
+      // blank or broken timer screen.
+      if (state.uri.path == '/timer') {
+        final session = ref.read(sessionProvider);
+        if (session.phase != SessionPhase.active) {
+          return '/setup';
+        }
       }
 
       // Paywall gate — free users get kFreeSessionLimit sessions.

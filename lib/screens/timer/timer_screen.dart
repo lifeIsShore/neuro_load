@@ -88,6 +88,97 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 
   void _finishSession() {
+    final session = ref.read(sessionProvider);
+    final target = session.targetDuration;
+    final elapsed = session.elapsed;
+
+    // S4-007: One More Rep nudge.
+    // If the user finishes before hitting their target and they have been
+    // focused (fewer than 3 laps), offer them a short extension prompt.
+    final underTarget = target != null && elapsed < target;
+    final wasClean = session.laps.length < 3;
+
+    if (underTarget && wasClean) {
+      _showOneMoreRepNudge(target, elapsed);
+    } else {
+      _doFinish();
+    }
+  }
+
+  void _showOneMoreRepNudge(Duration target, Duration elapsed) {
+    final remaining = target - elapsed;
+    final remainingMins = (remaining.inSeconds / 60).ceil();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.silverGrayDim,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text('💪', style: TextStyle(fontSize: 44)),
+            const SizedBox(height: 16),
+            Text(
+              'ONE MORE REP?',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppColors.teal,
+                    letterSpacing: 3,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You have $remainingMins minute${remainingMins == 1 ? '' : 's'} left '
+              'to hit your target.\nYou\'re clean — finish strong.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.6,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  // Stay in session — user dismissed the nudge to keep going
+                },
+                child: Text('KEEP GOING — $remainingMins MIN LEFT'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _doFinish();
+                },
+                child: const Text('End Session Anyway'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _doFinish() {
     ForegroundService.stop();
     ref.read(sessionProvider.notifier).finishSession();
     HapticFeedback.mediumImpact();

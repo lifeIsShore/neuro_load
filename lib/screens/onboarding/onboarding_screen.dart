@@ -398,7 +398,7 @@ class _LapTutorialPageState extends State<_LapTutorialPage>
 
 // ─── Page 3: Sensor Calibration ───────────────────────────────────────────────
 
-enum _CalibrationPhase { idle, sampling, done }
+enum _CalibrationPhase { idle, sampling, testing, done }
 
 class _SensorCalibrationPage extends StatefulWidget {
   final VoidCallback onCalibrated;
@@ -419,6 +419,14 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
   // Sample collection
   static const int _targetSamples = 3;
   final List<double> _samples = [];
+
+  // Saved baseline Z value from sampling
+  double _savedBaseline = 0.0;
+
+  // Hold timer for test-phase confirmation (1500ms face-down)
+  Timer? _holdTimer;
+  bool _testHolding = false;
+  bool _testDetected = false;
 
   // Animation for the progress arc
   late final AnimationController _arcController;
@@ -441,6 +449,7 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
   void dispose() {
     _sensorSub?.cancel();
     _sampleTimer?.cancel();
+    _holdTimer?.cancel();
     _arcController.dispose();
     super.dispose();
   }
@@ -472,6 +481,7 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
 
   Future<void> _finishCalibration() async {
     final avg = _samples.reduce((a, b) => a + b) / _samples.length;
+    _savedBaseline = avg;
 
     // Persist the averaged baseline
     final prefs = await SharedPreferences.getInstance();
@@ -479,20 +489,75 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
 
     HapticFeedback.mediumImpact();
     if (mounted) {
-      setState(() => _phase = _CalibrationPhase.done);
-      widget.onCalibrated();
+      setState(() {
+        _phase = _CalibrationPhase.testing;
+        _testDetected = false;
+        _testHolding = false;
+      });
+      // Subscribe to sensor again for the live test
+      _startTestPhase();
     }
+  }
+
+  void _startTestPhase() {
+    _sensorSub = accelerometerEventStream(
+      samplingPeriod: SensorInterval.normalInterval,
+    ).listen((e) {
+      if (!mounted) return;
+      setState(() => _currentZ = e.z);
+
+      // The face-down threshold is baseline + a margin.
+      // Upright baseline is typically +9 to +10; face-down flips to −9 to −10.
+      // We detect face-down when Z drops below (baseline − 12), meaning the
+      // phone has been inverted relative to its calibration orientation.
+      final threshold = _savedBaseline - 12.0;
+      final isFaceDown = e.z < threshold;
+
+      if (isFaceDown && !_testHolding && !_testDetected) {
+        setState(() => _testHolding = true);
+        _holdTimer = Timer(const Duration(milliseconds: 1200), () {
+          if (!mounted) return;
+          // Confirm: still face-down?
+          if (_currentZ < threshold) {
+            _sensorSub?.cancel();
+            HapticFeedback.heavyImpact();
+            setState(() {
+              _testDetected = true;
+              _testHolding = false;
+              _phase = _CalibrationPhase.done;
+            });
+            widget.onCalibrated();
+          } else {
+            setState(() => _testHolding = false);
+          }
+        });
+      } else if (!isFaceDown && _testHolding) {
+        _holdTimer?.cancel();
+        setState(() => _testHolding = false);
+      }
+    }, onError: (_) {
+      // Sensor error during test — degrade gracefully
+      _sensorSub?.cancel();
+      if (mounted) {
+        setState(() => _phase = _CalibrationPhase.done);
+        widget.onCalibrated();
+      }
+    });
   }
 
   void _onSensorError() {
     _sampleTimer?.cancel();
-    if (mounted && _phase == _CalibrationPhase.sampling) {
+    _holdTimer?.cancel();
+    if (mounted && (_phase == _CalibrationPhase.sampling || _phase == _CalibrationPhase.testing)) {
       _arcController.stop();
       _skip(); // Graceful degradation on sensor failure
     }
   }
 
   void _skip() {
+    _sensorSub?.cancel();
+    _holdTimer?.cancel();
+    _sampleTimer?.cancel();
     widget.onCalibrated(); // Unlock Continue without saving any baseline
   }
 
@@ -526,7 +591,7 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
           const SizedBox(height: 32),
 
           // ── Calibrate button ──────────────────────────────────────────────
-          if (_phase != _CalibrationPhase.done)
+          if (_phase != _CalibrationPhase.done && _phase != _CalibrationPhase.testing)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -542,7 +607,7 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
             ),
 
           // ── Skip link ─────────────────────────────────────────────────────
-          if (_phase == _CalibrationPhase.idle) ...[
+          if (_phase == _CalibrationPhase.idle || _phase == _CalibrationPhase.testing) ...[
             const SizedBox(height: 12),
             Center(
               child: GestureDetector(
@@ -624,6 +689,52 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
               ],
             ),
           ),
+        );
+
+      case _CalibrationPhase.testing:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                color: _testHolding
+                    ? AppColors.teal.withOpacity(0.15)
+                    : AppColors.surfaceElevated,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _testHolding ? AppColors.teal : AppColors.silverGrayDim,
+                  width: _testHolding ? 2 : 0.5,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('📱', style: TextStyle(fontSize: 44)),
+                  const SizedBox(height: 8),
+                  Text(
+                    _testHolding ? 'Hold…' : 'Flip it',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: _testHolding
+                              ? AppColors.teal
+                              : AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Now flip your phone face-down\nto confirm the trigger works.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.6,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         );
 
       case _CalibrationPhase.done:

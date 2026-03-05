@@ -119,7 +119,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     : 'Configure Supabase credentials below',
                 value: settings.cloudSyncEnabled,
                 onChanged: (v) async {
-                  ref.read(settingsProvider.notifier).toggleCloudSync();
+                  await ref.read(settingsProvider.notifier).toggleCloudSync();
                   if (v && isConfigured) {
                     await _runSync(settings.localOnlyNotes);
                   }
@@ -194,7 +194,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'High-Contrast Mode',
                 subtitle: 'WCAG 7:1 contrast ratio',
                 value: settings.highContrast,
-                onChanged: (v) =>
+                onChanged: (_) =>
                     ref.read(settingsProvider.notifier).toggleHighContrast(),
               ),
               _SettingsTile(
@@ -203,7 +203,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: settings.fontFamily,
                 trailing: const Icon(Icons.chevron_right,
                     color: AppColors.textTertiary),
-                onTap: () {},
+                onTap: () => _showFontPicker(context, settings.fontFamily),
               ),
 
               const SizedBox(height: 24),
@@ -315,6 +315,129 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         );
     }
+  }
+
+  // ── Font Picker ────────────────────────────────────────────────────────────
+
+  static const _kFonts = [
+    ('Inter',                  'Clean, modern sans-serif'),
+    ('Roboto',                 'Google’s default system font'),
+    ('Merriweather',           'Readable serif for long reads'),
+    ('JetBrains Mono',         'Monospaced — high legibility'),
+    ('Atkinson Hyperlegible',  'Designed for low vision'),
+  ];
+
+  void _showFontPicker(BuildContext context, String current) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.silverGrayDim,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'CHOOSE FONT',
+                style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                  color: AppColors.teal, letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Applied across the whole app instantly.',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ...(_kFonts.map((entry) {
+                final fontName = entry.$1;
+                final fontDesc = entry.$2;
+                final isSelected =
+                    ref.read(settingsProvider).fontFamily == fontName;
+                return GestureDetector(
+                  onTap: () async {
+                    await ref.read(settingsProvider.notifier).setFont(fontName);
+                    setSheet(() {});
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.teal.withOpacity(0.08)
+                          : AppColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.teal.withOpacity(0.5)
+                            : AppColors.silverGrayDim,
+                        width: isSelected ? 1 : 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                fontName,
+                                style: TextStyle(
+                                  fontFamily: fontName,
+                                  fontSize: 16,
+                                  color: isSelected
+                                      ? AppColors.teal
+                                      : AppColors.textPrimary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                fontDesc,
+                                style: Theme.of(ctx)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.textTertiary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          const Icon(Icons.check_circle_rounded,
+                              size: 18, color: AppColors.teal),
+                      ],
+                    ),
+                  ),
+                );
+              })),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Cloud Sync ────────────────────────────────────────────────────────────
