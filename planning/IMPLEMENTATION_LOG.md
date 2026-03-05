@@ -270,16 +270,21 @@ Full checklist: `planning/S4-001-STRIPE-SETUP.md`
 ---
 
 ## ─────────────────────────────────────────────
-## CI/CD STATUS
+## CI/CD STATUS — UPDATED 2026-03-05
 ## ─────────────────────────────────────────────
 
 | File | Runner | What it does |
 |------|--------|--------------|
-| `.github/workflows/ci_android.yml` | ubuntu-latest | analyze + test on every PR; APK + AAB on push to main |
+| `.github/workflows/ci_android.yml` | ubuntu-latest | **analyze + test** (PR); **Release APK + AAB** (push to main); **Manual Build** (workflow_dispatch); **Debug APK** (on-demand) |
 | `.github/workflows/ci_ios.yml` | macos-latest | analyze + test on every PR; unsigned IPA on push to main |
 | `android/app/build.gradle.kts` | — | Reads `android/key.properties` for release signing; falls back to debug if absent |
 
-**Pending one-time setup:** Add 4 Android secrets to GitHub → `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`. See `runway/SECRETS_CHECKLIST.md`.
+**Current Capabilities:**
+- [x] **Manual Trigger**: Workflow can be started via GitHub Actions UI.
+- [x] **Debug APK**: On-demand artifact available for instant device testing (no signing required).
+- [ ] **Production Secrets**: Needs 4 GitHub secrets for Release builds (`KEYSTORE_BASE64`, etc.).
+
+**Guide Created:** `brain/ci_cd_guide.md`
 
 ---
 
