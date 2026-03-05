@@ -49,6 +49,7 @@ app.*.map.json
 .env.*
 **/android/local.properties
 **/android/key.properties
+**/android/app/release.jks
 **/*.keystore
 **/*.jks
 

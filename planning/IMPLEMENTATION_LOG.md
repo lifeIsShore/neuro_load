@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-05 (Bug fixes: 01 auto-save, 02 quality score, 05 retry queue, 06 high-contrast, 07 about links, 09 Android notification action, 10 auto-distraction, 11 flow-state copy)  
+**Last Updated:** 2026-03-05 (Bug fixes: 01, 02, 05, 06, 07, 09-Android, 10, 11 + GitHub Actions CI/CD + runway/ folder created)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -211,8 +211,14 @@ The **core training loop** is production-quality:
 
 ### 🎯 NEXT: Stripe Checkout (MVP.003.003)
 
-**Why next?** All bugs addressed. Stripe is the only remaining MVP blocker before public beta.
+**Why next?** All bugs addressed. CI/CD pipelines are live. Stripe is the only remaining MVP blocker before public beta.
 
 **What to build:**
-1. **MVP.003.003** — Stripe Checkout via Supabase Edge Function.
-2. **Bug 08** — Live visual test phase in flip calibration (small, 1 day).
+1. **MVP.003.003** — Stripe Checkout via Supabase Edge Function (see `runway/GUIDE.md` §9, STRIPE-001 through STRIPE-004).
+2. **Bug 08** — Live visual test phase in flip calibration (1 day).
+
+**CI/CD is now live.** See `runway/GUIDE.md` for full setup instructions.
+- `.github/workflows/ci_android.yml` — analyze + test + APK + AAB on every push to main
+- `.github/workflows/ci_ios.yml` — analyze + test + unsigned IPA on every push to main
+- `android/app/build.gradle.kts` — reads `key.properties` for release signing
+- `runway/SECRETS_CHECKLIST.md` — one-time setup checklist for new environments

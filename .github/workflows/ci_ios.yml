@@ -1,0 +1,134 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# NeuroLoad — iOS CI/CD
+# Triggers: every push to main + every PR targeting main
+#
+# Jobs:
+#   1. test        → flutter analyze + unit tests  (shared with android workflow,
+#                    but runs independently so PRs always get a fast signal)
+#   2. build_ios   → unsigned release .ipa archive  [push to main only]
+#
+# Required GitHub Secrets for signed builds (add when App Store submission ready):
+#   APPLE_CERTIFICATE_BASE64    Base64-encoded .p12 distribution certificate
+#   APPLE_CERTIFICATE_PASSWORD  .p12 password
+#   APPLE_PROVISION_PROFILE_BASE64  Base64-encoded .mobileprovision
+#   APPLE_TEAM_ID               10-char Apple Team ID
+#   APP_STORE_CONNECT_API_KEY_ID        App Store Connect API Key ID
+#   APP_STORE_CONNECT_API_ISSUER_ID     Issuer ID
+#   APP_STORE_CONNECT_API_KEY_BASE64    Base64-encoded .p8 private key
+#
+# NOTE: iOS builds MUST run on macos-latest (Apple toolchain required).
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FLUTTER_VERSION: "3.24.0"   # Keep in sync with ci_android.yml
+
+jobs:
+  # ── 1. Analyze & Test ────────────────────────────────────────────────────────
+  test:
+    name: Analyze & Test (iOS runner)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation (Drift + Riverpod)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run unit tests
+        run: flutter test
+
+  # ── 2. Build Unsigned iOS Archive ────────────────────────────────────────────
+  build_ios:
+    name: Build iOS Release (unsigned)
+    runs-on: macos-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Archive .app into .ipa
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r ../neuroload-unsigned.ipa Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuroload-unsigned-ipa
+          path: build/ios/neuroload-unsigned.ipa
+          retention-days: 14
+
+  # ── 3. (FUTURE) Signed Build + TestFlight Upload ─────────────────────────────
+  # Uncomment and fill in secrets when ready for App Store submission.
+  #
+  # deploy_testflight:
+  #   name: Deploy to TestFlight
+  #   runs-on: macos-latest
+  #   needs: build_ios
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: ${{ env.FLUTTER_VERSION }}
+  #         channel: stable
+  #         cache: true
+  #     - name: Install dependencies
+  #       run: flutter pub get
+  #     - name: Run code generation
+  #       run: dart run build_runner build --delete-conflicting-outputs
+  #     - name: Import certificate
+  #       run: |
+  #         echo "${{ secrets.APPLE_CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
+  #         security create-keychain -p "" build.keychain
+  #         security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+  #         security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+  #         security list-keychain -d user -s build.keychain
+  #     - name: Import provisioning profile
+  #       run: |
+  #         echo "${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
+  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #         cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+  #     - name: Build signed IPA
+  #       run: flutter build ipa --release
+  #     - name: Upload to TestFlight
+  #       run: |
+  #         xcrun altool --upload-app -f build/ios/ipa/*.ipa \
+  #           --apiKey "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+  #           --apiIssuer "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}"
