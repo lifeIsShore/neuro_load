@@ -1106,6 +1106,15 @@ class _FounderOathPage extends StatelessWidget {
             body: 'A single button wipes everything — local and cloud — '
                 'permanently and irrevocably.',
           ),
+          const SizedBox(height: 16),
+          // Bug 11 fix: end-of-month Flow State promise.
+          const _PrivacyPoint(
+            icon: Icons.psychology_outlined,
+            title: 'The Promise',
+            body: 'Train consistently. By the end of the month, you will reach '
+                'a Flow State so deep that even if someone calls your name, '
+                'you won\'t hear them.',
+          ),
           const Spacer(),
         ],
       ),

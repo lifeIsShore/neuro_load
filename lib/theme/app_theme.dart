@@ -44,6 +44,33 @@ class AppColors {
 }
 
 class AppTheme {
+  /// Bug 06 fix: build a theme that responds to accessibility settings.
+  /// [highContrast] switches accent colours to WCAG 7:1 gold palette.
+  /// [fontFamily] allows switching away from Inter (e.g. OpenDyslexic).
+  static ThemeData buildTheme({
+    bool highContrast = false,
+    String fontFamily = 'Inter',
+  }) {
+    final base = darkTheme;
+    if (!highContrast && fontFamily == 'Inter') return base;
+
+    final accent = highContrast ? AppColors.highContrastAccent : AppColors.teal;
+    final borderColor =
+        highContrast ? AppColors.highContrastBorder : AppColors.silverGrayDim;
+
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: accent,
+        outline: borderColor,
+      ),
+      textTheme: _buildTextTheme(
+        ThemeData.dark(useMaterial3: true).textTheme,
+        fontFamily: fontFamily,
+        highContrast: highContrast,
+      ),
+    );
+  }
+
   static ThemeData get darkTheme {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
@@ -175,7 +202,17 @@ class AppTheme {
     );
   }
 
-  static TextTheme _buildTextTheme(TextTheme base) {
+  static TextTheme _buildTextTheme(
+    TextTheme base, {
+    String fontFamily = 'Inter',
+    bool highContrast = false,
+  }) {
+    // High contrast: bump all non-primary text to textPrimary for readability.
+    final bodyColor =
+        highContrast ? AppColors.textPrimary : AppColors.textSecondary;
+    final tertiaryColor =
+        highContrast ? AppColors.silverGray : AppColors.textTertiary;
+
     return base.copyWith(
       displayLarge: GoogleFonts.playfairDisplay(
         fontSize: 72,
@@ -236,13 +273,13 @@ class AppTheme {
       bodyMedium: GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w400,
-        color: AppColors.textSecondary,
+        color: bodyColor,
         height: 1.5,
       ),
       bodySmall: GoogleFonts.inter(
         fontSize: 12,
         fontWeight: FontWeight.w400,
-        color: AppColors.textTertiary,
+        color: tertiaryColor,
         height: 1.4,
       ),
       labelLarge: GoogleFonts.inter(
@@ -254,13 +291,13 @@ class AppTheme {
       labelMedium: GoogleFonts.inter(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: AppColors.textSecondary,
+        color: bodyColor,
         letterSpacing: 0.5,
       ),
       labelSmall: GoogleFonts.inter(
         fontSize: 10,
         fontWeight: FontWeight.w500,
-        color: AppColors.textTertiary,
+        color: tertiaryColor,
         letterSpacing: 1,
       ),
     );

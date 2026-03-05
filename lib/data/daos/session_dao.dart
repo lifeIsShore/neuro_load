@@ -99,6 +99,18 @@ class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
         .get();
   }
 
+  /// Bug 01 — Auto-save: updates only the elapsed seconds, leaving the
+  /// session open (isCompleted stays false). Called every 5 minutes.
+  Future<void> updateElapsed({
+    required int id,
+    required int totalElapsedSeconds,
+  }) =>
+      (update(sessions)..where((s) => s.id.equals(id))).write(
+        SessionsCompanion(
+          totalElapsedSeconds: Value(totalElapsedSeconds),
+        ),
+      );
+
   Future<void> deleteSession(int id) =>
       (delete(sessions)..where((s) => s.id.equals(id))).go();
 

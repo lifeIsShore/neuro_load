@@ -7,6 +7,8 @@ import '../../data/app_database.dart';
 import '../../data/database_providers.dart';
 import '../../services/export_service.dart';
 import '../../services/supabase_sync_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../theme/app_theme.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -213,21 +215,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'Privacy Policy',
                 trailing: const Icon(Icons.open_in_new,
                     size: 14, color: AppColors.textTertiary),
-                onTap: () {},
+                onTap: () => _launchUrl('https://neuroload.app/privacy'),
               ),
               _SettingsTile(
                 icon: Icons.article_outlined,
                 label: 'Terms of Service',
                 trailing: const Icon(Icons.open_in_new,
                     size: 14, color: AppColors.textTertiary),
-                onTap: () {},
+                onTap: () => _launchUrl('https://neuroload.app/terms'),
               ),
               _SettingsTile(
                 icon: Icons.accessibility_new_outlined,
-                label: 'Accessibility Statement',
-                trailing: const Icon(Icons.chevron_right,
-                    color: AppColors.textTertiary),
-                onTap: () {},
+                label: 'Impressum',
+                trailing: const Icon(Icons.open_in_new,
+                    size: 14, color: AppColors.textTertiary),
+                onTap: () => _launchUrl('https://neuroload.app/impressum'),
               ),
 
               const SizedBox(height: 32),
@@ -472,6 +474,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  // ── URL Launch (Bug 07) ──────────────────────────────────────────────
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open link. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

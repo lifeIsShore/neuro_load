@@ -3,6 +3,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/app_database.dart';
+import 'providers/session_provider.dart';
 import 'services/notification_service.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -32,11 +33,17 @@ class NeuroLoadApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    // Bug 06 fix: consume settings so high-contrast and font changes
+    // propagate globally through the MaterialApp theme.
+    final settings = ref.watch(settingsProvider);
 
     return MaterialApp.router(
       title: 'NeuroLoad',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.buildTheme(
+        highContrast: settings.highContrast,
+        fontFamily: settings.fontFamily,
+      ),
       routerConfig: router,
     );
   }

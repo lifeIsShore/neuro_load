@@ -87,14 +87,24 @@ class FaceDownNotifier extends StateNotifier<bool> {
     final nowDown = e.z <= _zThreshold;
 
     if (nowDown && !_isDown) {
-      // Start hold timer
+      // Start hold timer for face-down detection (session start trigger)
       _isDown = true;
       _holdTimer = Timer(_holdDuration, () {
         if (_isDown) state = true;
       });
     } else if (!nowDown && _isDown) {
+      // Bug 10 fix: phone flipped face-up during an active session
+      // → auto-log a distraction so users can't silently check messages.
       _isDown = false;
       _holdTimer?.cancel();
+
+      final phase = _ref.read(sessionProvider).phase;
+      if (phase == SessionPhase.active) {
+        _ref.read(sessionProvider.notifier).addLap(
+          trigger: DistractionTrigger.phone,
+          note: 'auto: phone flipped up',
+        );
+      }
     }
   }
 

@@ -57,6 +57,9 @@ dependencies:
   # Foreground service (keeps timer alive when app is backgrounded on Android)
   flutter_foreground_task: ^9.2.0
 
+  # URL launching (Privacy Policy, ToS, Impressum links)
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

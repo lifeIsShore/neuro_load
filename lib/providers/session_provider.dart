@@ -160,9 +160,18 @@ class SessionState {
   }
 
   double get qualityScore {
+    // Bug 02 fix: sessions under 5 minutes receive a duration multiplier
+    // so a 1-minute session with 0 laps can't score 100/100.
+    const minFullScoreSeconds = 300; // 5 minutes
+    final sessionSecs = elapsed.inSeconds;
+    final durationMultiplier = sessionSecs >= minFullScoreSeconds
+        ? 1.0
+        : sessionSecs / minFullScoreSeconds;
+
     final density = focusDensity;
     final penalty = laps.length * 3;
-    return (density - penalty).clamp(0, 100);
+    final raw = (density - penalty).clamp(0, 100);
+    return (raw * durationMultiplier).clamp(0, 100);
   }
 
   /// Earned break duration — Dynamic Break Earning (US 2.1)
@@ -240,22 +249,49 @@ class SessionNotifier extends StateNotifier<SessionState> {
     }
   }
 
-  /// Tick counter — used to throttle the persistent notification updates.
+  /// Tick counter — used to throttle notification updates and auto-saves.
   int _tickCount = 0;
+
+  /// Auto-save interval: persist elapsed time every 5 minutes.
+  static const int _autoSaveIntervalSeconds = 300;
 
   void tick() {
     if (state.phase == SessionPhase.active) {
       state = state.copyWith(
         elapsed: state.elapsed + const Duration(seconds: 1),
       );
-      // Update the persistent notification every 60 seconds to save battery.
       _tickCount++;
+
+      // Update the persistent notification every 60 seconds to save battery.
       if (_tickCount % 60 == 0) {
         NotificationService.showSessionActive(
           category: state.category?.label ?? 'Focus',
           elapsed: state.elapsed,
         );
       }
+
+      // Bug 01 fix: auto-save elapsed time every 5 minutes so a crash
+      // or force-kill doesn't lose all progress on long sessions.
+      if (_tickCount % _autoSaveIntervalSeconds == 0) {
+        _autoSaveProgress();
+      }
+    }
+  }
+
+  /// Writes the current elapsed seconds to the DB without marking the
+  /// session as complete. Safe to call repeatedly — it's an UPDATE.
+  Future<void> _autoSaveProgress() async {
+    final dbId = state.dbSessionId;
+    if (dbId == null) return;
+    try {
+      final dao = _ref.read(sessionDaoProvider);
+      await dao.updateElapsed(
+        id: dbId,
+        totalElapsedSeconds: state.elapsed.inSeconds,
+      );
+      debugPrint('[AutoSave] Saved elapsed ${state.elapsed.inSeconds}s for session $dbId');
+    } catch (e) {
+      debugPrint('[AutoSave] Failed: $e');
     }
   }
 
