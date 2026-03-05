@@ -282,6 +282,7 @@ Full checklist: `planning/S4-001-STRIPE-SETUP.md`
 **Current Capabilities:**
 - [x] **Manual Trigger**: Workflow can be started via GitHub Actions UI.
 - [x] **Debug APK**: On-demand artifact available for instant device testing (no signing required).
+- [x] **Build Fixes applied**: `withValues` refactored to `withOpacity` for CI compatibility; `prefer_const_constructors` fixed; unused imports removed.
 - [ ] **Production Secrets**: Needs 4 GitHub secrets for Release builds (`KEYSTORE_BASE64`, etc.).
 
 **Guide Created:** `brain/ci_cd_guide.md`

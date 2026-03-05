@@ -239,11 +239,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: 'DANGER ZONE', labelColor: AppColors.danger),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.dangerDim.withValues(alpha: 0.2),
+                  color: AppColors.dangerDim.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: AppColors.danger.withValues(alpha: 0.3),
-                      width: 0.5),
+                      color: AppColors.danger.withOpacity(0.3), width: 0.5),
                 ),
                 child: _SettingsTile(
                   icon: Icons.delete_forever_outlined,
@@ -320,11 +319,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // ── Font Picker ────────────────────────────────────────────────────────────
 
   static const _kFonts = [
-    ('Inter',                  'Clean, modern sans-serif'),
-    ('Roboto',                 'Google’s default system font'),
-    ('Merriweather',           'Readable serif for long reads'),
-    ('JetBrains Mono',         'Monospaced — high legibility'),
-    ('Atkinson Hyperlegible',  'Designed for low vision'),
+    ('Inter', 'Clean, modern sans-serif'),
+    ('Roboto', 'Google’s default system font'),
+    ('Merriweather', 'Readable serif for long reads'),
+    ('JetBrains Mono', 'Monospaced — high legibility'),
+    ('Atkinson Hyperlegible', 'Designed for low vision'),
   ];
 
   void _showFontPicker(BuildContext context, String current) {
@@ -343,7 +342,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 36, height: 4,
+                  width: 36,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: AppColors.silverGrayDim,
                     borderRadius: BorderRadius.circular(2),
@@ -354,15 +354,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Text(
                 'CHOOSE FONT',
                 style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
-                  color: AppColors.teal, letterSpacing: 2,
-                ),
+                      color: AppColors.teal,
+                      letterSpacing: 2,
+                    ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Applied across the whole app instantly.',
                 style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textTertiary,
-                ),
+                      color: AppColors.textTertiary,
+                    ),
               ),
               const SizedBox(height: 20),
               ...(_kFonts.map((entry) {
@@ -415,12 +416,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 fontDesc,
-                                style: Theme.of(ctx)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.textTertiary,
-                                    ),
+                                style:
+                                    Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                          color: AppColors.textTertiary,
+                                        ),
                               ),
                             ],
                           ),
@@ -547,7 +546,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     // Reload config in parent and run a test ping
                     await _loadSupabaseConfig();
                     final result = await service.testConnection();
-                    if (mounted) {
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(result.success

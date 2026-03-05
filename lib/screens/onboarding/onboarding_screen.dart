@@ -6,12 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:drift/drift.dart' show Value;
-
-import '../../data/app_database.dart';
-import '../../data/daos/session_dao.dart';
-import '../../data/tables.dart';
 import '../../theme/app_theme.dart';
+import '../../data/app_database.dart';
+import 'package:drift/drift.dart' show Value;
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -548,7 +545,9 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
   void _onSensorError() {
     _sampleTimer?.cancel();
     _holdTimer?.cancel();
-    if (mounted && (_phase == _CalibrationPhase.sampling || _phase == _CalibrationPhase.testing)) {
+    if (mounted &&
+        (_phase == _CalibrationPhase.sampling ||
+            _phase == _CalibrationPhase.testing)) {
       _arcController.stop();
       _skip(); // Graceful degradation on sensor failure
     }
@@ -591,7 +590,8 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
           const SizedBox(height: 32),
 
           // ── Calibrate button ──────────────────────────────────────────────
-          if (_phase != _CalibrationPhase.done && _phase != _CalibrationPhase.testing)
+          if (_phase != _CalibrationPhase.done &&
+              _phase != _CalibrationPhase.testing)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -607,7 +607,8 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
             ),
 
           // ── Skip link ─────────────────────────────────────────────────────
-          if (_phase == _CalibrationPhase.idle || _phase == _CalibrationPhase.testing) ...[
+          if (_phase == _CalibrationPhase.idle ||
+              _phase == _CalibrationPhase.testing) ...[
             const SizedBox(height: 12),
             Center(
               child: GestureDetector(
@@ -705,7 +706,8 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
                     : AppColors.surfaceElevated,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _testHolding ? AppColors.teal : AppColors.silverGrayDim,
+                  color:
+                      _testHolding ? AppColors.teal : AppColors.silverGrayDim,
                   width: _testHolding ? 2 : 0.5,
                 ),
               ),

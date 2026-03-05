@@ -83,8 +83,8 @@ class _BreakTimerScreenState extends State<BreakTimerScreen>
             decoration: BoxDecoration(
               gradient: RadialGradient(
                 colors: [
-                  restBaseColor.withValues(
-                      alpha: 0.15 + (_pulseController.value * 0.1)),
+                  restBaseColor
+                      .withOpacity(0.15 + (_pulseController.value * 0.1)),
                   AppColors.background,
                 ],
                 center: Alignment.center,

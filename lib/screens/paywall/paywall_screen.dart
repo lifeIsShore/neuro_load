@@ -70,7 +70,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: AppColors.teal.withValues(alpha: 0.4), width: 1),
+                      color: AppColors.teal.withOpacity(0.4), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,10 +80,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.teal.withValues(alpha: 0.15),
+                        color: AppColors.teal.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(100),
                         border: Border.all(
-                          color: AppColors.teal.withValues(alpha: 0.4),
+                          color: AppColors.teal.withOpacity(0.4),
                           width: 0.5,
                         ),
                       ),
@@ -300,8 +300,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   if (clean != v) {
                     controller.value = TextEditingValue(
                       text: clean,
-                      selection:
-                          TextSelection.collapsed(offset: clean.length),
+                      selection: TextSelection.collapsed(offset: clean.length),
                     );
                   }
                 },
@@ -321,8 +320,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   onPressed: _redeeming
                       ? null
                       : () async {
-                          final code =
-                              controller.text.trim().toUpperCase();
+                          final code = controller.text.trim().toUpperCase();
 
                           // Strict validation: exactly 8 uppercase
                           // alphanumeric characters.
@@ -356,8 +354,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       ? const SizedBox(
                           height: 18,
                           width: 18,
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Redeem'),
                 ),
