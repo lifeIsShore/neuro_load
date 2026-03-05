@@ -1,10 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:http/http.dart' as http;
 
 import '../../theme/app_theme.dart';
 import '../../providers/subscription_provider.dart';
@@ -18,7 +14,12 @@ class PaywallScreen extends ConsumerStatefulWidget {
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   bool _redeeming = false;
-  bool _launchingCheckout = false;
+
+  // ── Beta flag ────────────────────────────────────────────────────────────────
+  // Stripe checkout is disabled during beta to avoid accidental real payments.
+  // To re-enable: set _betaMode = false, restore the Stripe imports and
+  // _launchStripeCheckout() method from S4-001-STRIPE-SETUP.md / git history.
+  static const bool _betaMode = true;
 
   @override
   Widget build(BuildContext context) {
@@ -149,40 +150,66 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
               const SizedBox(height: 20),
 
-              // Primary CTA — Stripe Checkout
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: (isPaid || _launchingCheckout)
-                      ? null
-                      : _launchStripeCheckout,
-                  child: _launchingCheckout
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.background,
-                          ),
-                        )
-                      : Text(
-                          isPaid
-                              ? 'UNLOCKED \u2713'
-                              : 'UNLOCK NEUROLOAD \u2014 \u20ac49',
+              // ── Primary CTA ────────────────────────────────────────────────
+              // BETA: payment is disabled. Button shows a greyed-out state
+              // and explains to use a voucher code instead.
+              // Re-enable by setting _betaMode = false before public launch.
+              if (isPaid)
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: null,
+                    child: const Text('UNLOCKED \u2713'),
+                  ),
+                )
+              else if (_betaMode)
+                Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: ElevatedButton(
+                        onPressed: _showBetaNotice,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.surfaceElevated,
+                          foregroundColor: AppColors.textTertiary,
+                          side: const BorderSide(
+                              color: AppColors.silverGrayDim, width: 0.5),
                         ),
+                        child: const Text('PAYMENT COMING SOON'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Beta build \u2014 use your tester code below to unlock.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                )
+              else
+                // Production CTA — restore full _launchStripeCheckout() here
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: null, // wire to _launchStripeCheckout
+                    child: const Text('UNLOCK NEUROLOAD \u2014 \u20ac49'),
+                  ),
                 ),
-              ),
 
               const SizedBox(height: 12),
 
-              // Voucher CTA
+              // Voucher CTA — always visible
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
                   onPressed: (_redeeming || isPaid) ? null : _showVoucherInput,
                   child: Text(
-                    'I have a voucher code',
+                    isPaid ? 'Unlocked' : 'I have a voucher code',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -205,118 +232,26 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
-  // ── Stripe Checkout ────────────────────────────────────────────────────────
-  //
-  // Flow:
-  //   1. Call the Supabase Edge Function create-checkout-session to get a URL.
-  //   2. Open the URL in the system browser / in-app web view.
-  //   3. Stripe redirects to neuroload://payment/success?session_id=...
-  //   4. The stripe-webhook Edge Function fires and upserts user_licences.
-  //   5. The app polls / listens for isPaidProvider to flip to true.
-  //
-  // The deep-link handling (step 3) requires:
-  //   - Android: intent-filter in AndroidManifest.xml for neuroload://
-  //   - iOS: URL scheme in Info.plist
-  //   - app_links or uni_links package to receive the callback
-  // That wiring is outside this file — see IMPLEMENTATION_LOG.md S4-001.
+  // ── Beta notice ────────────────────────────────────────────────────────────
 
-  Future<void> _launchStripeCheckout() async {
-    if (!mounted) return;
-    setState(() => _launchingCheckout = true);
-
-    try {
-      // Load the Supabase project URL from preferences (saved in Settings).
-      final prefs = await SharedPreferences.getInstance();
-      final projectUrl = prefs.getString('supabase_project_url') ?? '';
-      final anonKey    = prefs.getString('supabase_anon_key')    ?? '';
-
-      if (projectUrl.isEmpty || anonKey.isEmpty) {
-        _showError(
-          'Supabase is not configured.\n'
-          'Please set your credentials in Settings first.',
-        );
-        return;
-      }
-
-      // Generate a stable anonymous user ID (UUID v4 stored locally).
-      // When Supabase Auth is added, replace this with the real user ID.
-      String userId = prefs.getString('anonymous_user_id') ?? '';
-      if (userId.isEmpty) {
-        userId = _generateUuid();
-        await prefs.setString('anonymous_user_id', userId);
-      }
-
-      final endpoint =
-          '$projectUrl/functions/v1/create-checkout-session';
-
-      final response = await http
-          .post(
-            Uri.parse(endpoint),
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': anonKey,
-              'Authorization': 'Bearer $anonKey',
-            },
-            body: jsonEncode({'user_id': userId}),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        _showError(body['error'] ?? 'Checkout failed. Please try again.');
-        return;
-      }
-
-      final data     = jsonDecode(response.body);
-      final checkoutUrl = data['url'] as String?;
-
-      if (checkoutUrl == null || checkoutUrl.isEmpty) {
-        _showError('Could not retrieve checkout URL.');
-        return;
-      }
-
-      // Open Stripe Checkout in the external browser.
-      final uri = Uri.parse(checkoutUrl);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        _showError('Could not open the payment page. Please try again.');
-      }
-    } catch (e) {
-      _showError('Something went wrong: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _launchingCheckout = false);
-    }
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
+  void _showBetaNotice() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.danger,
+      const SnackBar(
+        content: Text(
+          'Payment is not available in this beta build. '
+          'Use your tester voucher code to unlock full access.',
+        ),
         behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 5),
       ),
     );
   }
 
-  /// Generates a simple UUID v4 (pseudo-random) without external packages.
-  String _generateUuid() {
-    final r = List<int>.generate(16, (_) =>
-        (DateTime.now().microsecondsSinceEpoch + _.hashCode) % 256);
-    r[6] = (r[6] & 0x0f) | 0x40; // version 4
-    r[8] = (r[8] & 0x3f) | 0x80; // variant bits
-    String hex(int b) => b.toRadixString(16).padLeft(2, '0');
-    return '${hex(r[0])}${hex(r[1])}${hex(r[2])}${hex(r[3])}-'
-        '${hex(r[4])}${hex(r[5])}-'
-        '${hex(r[6])}${hex(r[7])}-'
-        '${hex(r[8])}${hex(r[9])}-'
-        '${hex(r[10])}${hex(r[11])}${hex(r[12])}${hex(r[13])}${hex(r[14])}${hex(r[15])}';
-  }
-
   // ── Voucher redemption ─────────────────────────────────────────────────────
   //
-  // Any 8-character uppercase code is accepted while Stripe is not yet the
-  // only path. When `markPaid()` is called the `isPaidProvider` listener
-  // auto-navigates to /setup.
+  // Accepts exactly 8 uppercase alphanumeric characters (A-Z, 0-9).
+  // Post-beta TODO: validate against Supabase RPC claim_voucher(code)
+  // instead of accepting any correctly-formatted code.
 
   void _showVoucherInput() {
     final controller = TextEditingController();
@@ -346,17 +281,36 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       letterSpacing: 2,
                     ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                '8 characters — letters and numbers only.',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
                 maxLength: 8,
                 textCapitalization: TextCapitalization.characters,
+                // Only allow A-Z and 0-9 while typing
+                onChanged: (v) {
+                  final clean =
+                      v.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+                  if (clean != v) {
+                    controller.value = TextEditingValue(
+                      text: clean,
+                      selection:
+                          TextSelection.collapsed(offset: clean.length),
+                    );
+                  }
+                },
                 style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
                       letterSpacing: 6,
                       color: AppColors.teal,
                     ),
                 decoration: const InputDecoration(
-                  hintText: 'XXXXXXXX',
+                  hintText: 'AB12CD34',
                   counterStyle: TextStyle(color: AppColors.textTertiary),
                 ),
               ),
@@ -367,11 +321,18 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   onPressed: _redeeming
                       ? null
                       : () async {
-                          final code = controller.text.trim().toUpperCase();
-                          if (code.length < 8) {
+                          final code =
+                              controller.text.trim().toUpperCase();
+
+                          // Strict validation: exactly 8 uppercase
+                          // alphanumeric characters.
+                          if (!RegExp(r'^[A-Z0-9]{8}$').hasMatch(code)) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Enter a valid 8-character code.'),
+                                content: Text(
+                                  'Invalid code. Must be exactly 8 letters/numbers.',
+                                ),
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                             return;
@@ -379,25 +340,29 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
                           setModal(() => _redeeming = true);
 
-                          // TODO: call Supabase RPC claim_voucher(code)
-                          // For now, accept any 8-char code as valid.
+                          // Simulate network check during beta.
+                          // POST-BETA: replace with Supabase RPC call
+                          // to validate the code against the voucher table.
                           await Future.delayed(
                               const Duration(milliseconds: 800));
 
                           if (ctx.mounted) Navigator.pop(ctx);
 
-                          // Mark paid — the listener auto-navigates to /setup.
+                          // Mark paid — the isPaidProvider listener
+                          // auto-navigates to /setup.
                           await ref.read(isPaidProvider.notifier).markPaid();
                         },
                   child: _redeeming
                       ? const SizedBox(
                           height: 18,
                           width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child:
+                              CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Redeem'),
                 ),
               ),
+              const SizedBox(height: 8),
             ],
           ),
         ),

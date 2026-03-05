@@ -25,9 +25,19 @@ class NotificationService {
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    // Initialize timezone database + local zone
+    // Initialize timezone database first, then resolve the local zone.
+    // Order matters: initializeTimeZones() must complete before any
+    // tz.getLocation() call, otherwise scheduleDailyReminder() silently
+    // fails on first run on some Android devices.
     tz.initializeTimeZones();
-    final localTz = await FlutterTimezone.getLocalTimezone();
+    final String localTz;
+    try {
+      localTz = await FlutterTimezone.getLocalTimezone();
+    } catch (_) {
+      // Fallback to UTC if the platform channel fails (rare on emulators).
+      tz.setLocalLocation(tz.getLocation('UTC'));
+      return;
+    }
     tz.setLocalLocation(tz.getLocation(localTz));
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');

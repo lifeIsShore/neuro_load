@@ -21,13 +21,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
-  final List<String> _recentSubCategories = [
-    'Deep Work',
-    'Research',
-    'Chapter 3',
-    'Emails',
-    'Code review',
-  ];
+  // Sub-category suggestions are loaded from DB history (S5-001).
+  // For beta, the list starts empty so no fake suggestions appear.
+  final List<String> _recentSubCategories = [];
 
   @override
   void initState() {

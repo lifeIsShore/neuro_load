@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-05 (Sprint 4 complete — all 8 tasks shipped)
+**Last Updated:** 2026-03-05 (Sprint 4 complete + beta polish fixes applied)
 **Author:** AI Engineering Assistant
 **Purpose:** Single source of truth for implementation status, audit findings, and sprint tasks.
 
@@ -48,7 +48,7 @@
 | MVP.001.011 | Post-Session Summary Screen | ✅ DONE | Quality card, 1RM, density, lap count, top trigger on `SummaryScreen` |
 | MVP.001.012 | Zombie Session Guardrail | ✅ DONE | `zombieSessionProvider` → `findIncomplete()` → `AppShell._checkZombie()` |
 | MVP.001.013 | Recovery Modal | ✅ DONE | `ZombieRecoveryModal` — Resume / 2-step Discard, `resumeZombieSession()` |
-| US 1.2 | Sub-Category Auto-Suggest | ❌ NOT STARTED | Plain TextField. Top-5 historical suggestions from DB not implemented. → Sprint 5 |
+| US 1.2 | Sub-Category Auto-Suggest | ❌ NOT STARTED | Plain TextField. Hardcoded chips removed (beta polish). DB lookup → Sprint 5 (S5-001). |
 | US 1.3 | Baseline Aim (+5% PB Nudge) | ❌ NOT STARTED | Target duration in state. "+5% from last 3 sessions" display on setup screen not built. → Sprint 5 |
 | US 1.9 | Haptic Milestones | ✅ DONE | `_checkHapticMilestone()` — `lightImpact()` every 600s |
 | US 2.4 | "One More Rep" Nudge | ✅ DONE | **S4-007 shipped.** `_finishSession()` checks elapsed < target AND laps < 3. Shows bottom sheet with exact remaining minutes. "Keep Going" stays in session; "End Anyway" calls `_doFinish()`. |
@@ -86,9 +86,9 @@
 
 | Story | Title | Status | Notes |
 |-------|-------|--------|-------|
-| MVP.003.001 | Dynamic Pricing Display | 🔨 PARTIAL | `PaywallScreen` built, €49 hardcoded. Supabase-dynamic pricing not wired. |
+| MVP.003.001 | Dynamic Pricing Display | 🔨 PARTIAL | `PaywallScreen` built, €49 hardcoded. Supabase-dynamic pricing not wired. → S5-008 |
 | MVP.003.002 | Forced Paywall After One Session | ✅ DONE | `paywallGateProvider` + GoRouter redirect; `freeSessionsUsedProvider` incremented on finish |
-| MVP.003.003 | Stripe Checkout Integration | ✅ DONE | **S4-001 shipped.** Two Edge Functions deployed (`create-checkout-session`, `stripe-webhook`). Flutter side: calls Edge Function, opens Stripe URL via `url_launcher`, polls `isPaidProvider`. Voucher path retained as fallback. Anonymous user ID generated and persisted locally. See `planning/S4-001-STRIPE-SETUP.md` for deployment guide. **Requires 7-step manual deploy to go live.** |
+| MVP.003.003 | Stripe Checkout Integration | 🔨 PARTIAL | **Code complete. Intentionally disabled for beta** (`_betaMode = true` in `paywall_screen.dart`). Buy Now shows "PAYMENT COMING SOON" + snackbar directing to voucher. All Stripe imports removed for clean beta build. Edge Functions written and ready. **To re-enable:** set `_betaMode = false`, restore imports + `_launchStripeCheckout()`, follow `S4-001-STRIPE-SETUP.md`. |
 | MVP.003.004 | License Status Verification | ✅ DONE | `isPaidProvider`, PLUS/FREE chip, voucher redemption |
 | MVP.003.005 | GDPR Data Export | ✅ DONE | `ExportService.exportAllData()` → `share_plus` → sessions.csv + laps.csv |
 | MVP.003.006 | GDPR Wipe Data | ✅ DONE | Laps → sessions delete, `SharedPreferences.clear()`, in-memory reset |
@@ -120,8 +120,8 @@
 | MVP.005.001 | Settings Screen | ✅ DONE | All sections wired: Privacy, Accessibility, About, Danger Zone |
 | MVP.005.002 | Impressum Page | ✅ DONE | `url_launcher` → `neuroload.app/impressum` |
 | MVP.005.003 | Privacy Policy & ToS Links | ✅ DONE | `url_launcher` → `neuroload.app/privacy` + `/terms` |
-| GAP-001 | Settings Persistence | ✅ DONE | **S4-003 shipped.** `SettingsNotifier` now loads all 4 keys from SharedPreferences on construction. Writes on every toggle/set. Keys: `settings_high_contrast`, `settings_local_only_notes`, `settings_cloud_sync`, `settings_font_family`. |
-| GAP-002 | Font Picker UI | ✅ DONE | **S4-004 shipped.** Bottom sheet with 5 font options (Inter, Roboto, Merriweather, JetBrains Mono, Atkinson Hyperlegible). Each rendered in its own fontFamily. Checkmark on active. Persists via S4-003. |
+| GAP-001 | Settings Persistence | ✅ DONE | **S4-003 shipped.** `SettingsNotifier` now loads all 4 keys from SharedPreferences on construction. Writes on every toggle/set. |
+| GAP-002 | Font Picker UI | ✅ DONE | **S4-004 shipped.** Bottom sheet with 5 font options. Each rendered in its own fontFamily. Checkmark on active. Persists via S4-003. |
 
 ---
 
@@ -131,7 +131,7 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| GAP-003 | `/timer` Route Guard | ✅ DONE | **S4-005 shipped.** GoRouter redirect: if `session.phase != active` when navigating to `/timer`, redirects to `/setup`. Prevents blank/broken screen on direct navigation or hot-reload. |
+| GAP-003 | `/timer` Route Guard | ✅ DONE | **S4-005 shipped.** GoRouter redirect: if `session.phase != active` when navigating to `/timer`, redirects to `/setup`. |
 
 ---
 
@@ -168,10 +168,10 @@
 | Bug 03 | Pause Logic Too Generous | ⚠️ STALE | No pause feature exists. `SessionPhase` = idle/active/rest/complete. Closed as WONTFIX. |
 | Bug 04 | Language Selection | ❌ DEFERRED | No i18n system. Requires `flutter_localizations` + ARB files. Phase 2. |
 | Bug 05 | Sporadic DB Write Failure | ✅ FIXED | `PendingSessionStore` queues to SharedPrefs on catch; `AppShell._flushPendingSession()` retries on launch |
-| Bug 06 | High Contrast Non-Functional | ✅ FIXED | Theme rebuilds wired ✅. Font picker UI shipped in S4-004 ✅. Both persist via S4-003 ✅. |
+| Bug 06 | High Contrast Non-Functional | ✅ FIXED | Theme rebuilds wired. Font picker UI shipped in S4-004. Both persist via S4-003. |
 | Bug 07 | About Section Links | ✅ FIXED | `url_launcher`, `_launchUrl()`, 3 URLs wired. Locale-aware URLs blocked by Bug 04. |
 | Bug 08 | Flip Calibration UX | ✅ FIXED | **S4-002 shipped.** 4-phase flow: idle→sampling→testing→done. Flip-to-confirm with 1.2s hold timer. |
-| Bug 09 | Lock Screen Widget | 🔨 PARTIAL | Android `AndroidNotificationAction` + callback wired ✅. iOS ActivityKit deferred Sprint 5+. |
+| Bug 09 | Lock Screen Widget | 🔨 PARTIAL | Android `AndroidNotificationAction` + callback wired. iOS ActivityKit deferred Sprint 5+. |
 | Bug 10 | Auto-Distraction on Flip-Up | ✅ FIXED | `FaceDownNotifier._onEvent` → `addLap(phone, 'auto: phone flipped up')` when phase==active |
 | Bug 11 | Flow State Promise | ✅ FIXED | 4th `_PrivacyPoint` in `_FounderOathPage` with `Icons.psychology_outlined` |
 
@@ -207,7 +207,7 @@ All 8 tasks closed. No regressions introduced.
 
 | Task | Title | Status | Key Files Changed |
 |------|-------|--------|-------------------|
-| S4-001 | Stripe Checkout Integration | ✅ DONE | `paywall_screen.dart`, `supabase/functions/create-checkout-session/index.ts`, `supabase/functions/stripe-webhook/index.ts`, `planning/S4-001-STRIPE-SETUP.md` |
+| S4-001 | Stripe Checkout Integration | 🔨 PARTIAL | Edge Functions written. Flutter code complete. **Beta build: Stripe disabled** (`_betaMode = true`). Voucher hardened to `[A-Z0-9]{8}` regex. Fake sub-category chips removed. Android label fixed. Timezone init hardened. |
 | S4-002 | Calibration Live Test Phase | ✅ DONE | `onboarding_screen.dart` |
 | S4-003 | Settings Persistence | ✅ DONE | `session_provider.dart` (SettingsNotifier) |
 | S4-004 | Font Picker UI | ✅ DONE | `settings_screen.dart` |
@@ -217,14 +217,32 @@ All 8 tasks closed. No regressions introduced.
 | S4-008 | Ghost Intent Flash Fix | ✅ DONE | `distraction_modal.dart` |
 
 ### S4-001 Deployment Status
-The Stripe integration is **code-complete** but requires manual deployment to go live:
-- [ ] Supabase Edge Functions deployed (`create-checkout-session`, `stripe-webhook`)
-- [ ] Stripe secrets set in Supabase Dashboard
-- [ ] `user_licences` table created in Supabase
-- [ ] Deep-link URL scheme registered in AndroidManifest + Info.plist
-- [ ] `app_links` package wired in `main.dart` for payment callback
+Stripe is **code-complete but intentionally disabled for beta** (`_betaMode = true` in `paywall_screen.dart`). Before public launch:
+- [ ] Set `_betaMode = false` in `paywall_screen.dart`
+- [ ] Restore Stripe imports (`dart:convert`, `http`, `url_launcher`, `shared_preferences`)
+- [ ] Restore `_launchStripeCheckout()` method from git history / `S4-001-STRIPE-SETUP.md`
+- [ ] Deploy Supabase Edge Functions (`create-checkout-session`, `stripe-webhook`)
+- [ ] Set Stripe secrets in Supabase Dashboard
+- [ ] Create `user_licences` table in Supabase
+- [ ] Register deep-link scheme in AndroidManifest + Info.plist
+- [ ] Wire `app_links` in `main.dart` for post-payment redirect
 
 Full checklist: `planning/S4-001-STRIPE-SETUP.md`
+
+---
+
+## ─────────────────────────────────────────────
+## BETA POLISH FIXES
+## Applied post-Sprint 4, pre-beta-release
+## ─────────────────────────────────────────────
+
+| Fix | File | What changed |
+|-----|------|--------------|
+| Stripe disabled for beta | `paywall_screen.dart` | `_betaMode = true`. Buy Now shows "PAYMENT COMING SOON", tapping shows snackbar directing to voucher. All Stripe imports removed for clean build. |
+| Voucher validation hardened | `paywall_screen.dart` | Was: any 8-character string accepted. Now: `RegExp(r'^[A-Z0-9]{8}$')` enforced. Input field also strips non-alphanumeric characters live as user types. |
+| Fake sub-category chips removed | `setup_screen.dart` | Hardcoded `['Deep Work', 'Research', ...]` list replaced with `[]`. Chip row renders nothing until S5-001 ships real DB lookup. |
+| Android app label fixed | `AndroidManifest.xml` | `android:label` changed from `neuro_load` to `NeuroLoad`. |
+| Timezone init hardened | `notification_service.dart` | `getLocalTimezone()` wrapped in try/catch. Falls back to UTC if platform channel fails (emulators, some Android 12 cold starts). Prevents silent daily reminder scheduling failure. |
 
 ---
 
@@ -279,7 +297,11 @@ Full checklist: `planning/S4-001-STRIPE-SETUP.md`
 | "US 2.3 Break Notifications never called" | 🔴 HIGH gap | ✅ FIXED — S4-006 wired `showRestComplete()` |
 | "US 2.4 One More Rep missing" | 🔴 HIGH gap | ✅ FIXED — S4-007 bottom sheet with dynamic remaining time |
 | "US 4.8 Ghost Intent flash never fires" | 🔴 HIGH gap | ✅ FIXED — S4-008 `_userActed` flag implemented |
-| "Stripe checkout is a SnackBar stub" | 🔴 BLOCKER | ✅ FIXED — S4-001 full implementation code-complete |
+| "Stripe checkout is a SnackBar stub" | 🔴 BLOCKER | ✅ FIXED — S4-001 code complete; disabled for beta via `_betaMode` flag |
 | "Settings lost on restart" | 🔴 HIGH gap | ✅ FIXED — S4-003 SharedPreferences persistence |
 | "Font picker onTap stub" | 🟡 MEDIUM gap | ✅ FIXED — S4-004 bottom sheet with 5 fonts |
 | "/timer guard missing" | 🔴 HIGH gap | ✅ FIXED — S4-005 GoRouter redirect |
+| "Voucher accepts any 8 chars" | 🟡 MEDIUM gap | ✅ FIXED — beta polish, `[A-Z0-9]{8}` regex enforced |
+| "Hardcoded sub-category chips" | 🟡 MEDIUM gap | ✅ FIXED — beta polish, list cleared to `[]` |
+| "Android label shows neuro_load" | 🟡 MEDIUM gap | ✅ FIXED — beta polish, label corrected to `NeuroLoad` |
+| "Timezone init can fail silently" | 🟢 LOW gap | ✅ FIXED — beta polish, try/catch + UTC fallback added |
