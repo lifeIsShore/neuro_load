@@ -239,10 +239,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: 'DANGER ZONE', labelColor: AppColors.danger),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.dangerDim.withValues(alpha: 0.2),
+                  color: AppColors.dangerDim.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: AppColors.danger.withValues(alpha: 0.3),
+                      color: AppColors.danger.withOpacity(0.3),
                       width: 0.5),
                 ),
                 child: _SettingsTile(
@@ -288,7 +288,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.success.withValues(alpha: 0.12),
+            color: AppColors.success.withOpacity(0.12),
             borderRadius: BorderRadius.circular(100),
           ),
           child: Text(
@@ -303,7 +303,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.danger.withValues(alpha: 0.12),
+            color: AppColors.danger.withOpacity(0.12),
             borderRadius: BorderRadius.circular(100),
           ),
           child: Text(
@@ -385,12 +385,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.teal.withValues(alpha: 0.08)
+                          ? AppColors.teal.withOpacity(0.08)
                           : AppColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.teal.withValues(alpha: 0.5)
+                            ? AppColors.teal.withOpacity(0.5)
                             : AppColors.silverGrayDim,
                         width: isSelected ? 1 : 0.5,
                       ),
@@ -787,7 +787,7 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.teal,
+            activeColor: AppColors.teal,
           ),
         ],
       ),

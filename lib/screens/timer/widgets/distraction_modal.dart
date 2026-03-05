@@ -138,7 +138,7 @@ class _DistractionModalState extends State<DistractionModal> {
                 value: value,
                 backgroundColor: AppColors.surfaceElevated,
                 valueColor: AlwaysStoppedAnimation(
-                    AppColors.teal.withValues(alpha: 0.7)),
+                    AppColors.teal.withOpacity(0.7)),
                 minHeight: 2,
               ),
             ),

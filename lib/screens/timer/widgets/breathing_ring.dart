@@ -69,7 +69,7 @@ class _RingPainter extends CustomPainter {
 
     // Outer ambient glow
     final glowPaint = Paint()
-      ..color = AppColors.silverGray.withValues(alpha: 0.04)
+      ..color = AppColors.silverGray.withOpacity(0.04)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius, glowPaint);
 
@@ -83,14 +83,14 @@ class _RingPainter extends CustomPainter {
 
     // Inner ring (slightly smaller, dimmer)
     final innerPaint = Paint()
-      ..color = AppColors.silverGrayDim.withValues(alpha: 0.4)
+      ..color = AppColors.silverGrayDim.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
     canvas.drawCircle(center, radius - 24, innerPaint);
 
     // Teal accent arc — rotates slowly with the breath
     final accentPaint = Paint()
-      ..color = AppColors.teal.withValues(alpha: 0.6)
+      ..color = AppColors.teal.withOpacity(0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
@@ -107,7 +107,7 @@ class _RingPainter extends CustomPainter {
 
     // Breath indicator dots at top (cardinal)
     final dotPaint = Paint()
-      ..color = AppColors.silverGrayDim.withValues(alpha: 0.6)
+      ..color = AppColors.silverGrayDim.withOpacity(0.6)
       ..style = PaintingStyle.fill;
     for (int i = 0; i < 12; i++) {
       final angle = (i / 12) * 2 * math.pi - math.pi / 2;

@@ -258,7 +258,7 @@ class _CategorySelector extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
               color: isSelected
-                  ? color.withValues(alpha: 0.15)
+                  ? color.withOpacity(0.15)
                   : AppColors.surfaceElevated,
               borderRadius: BorderRadius.circular(100),
               border: Border.all(
@@ -313,7 +313,7 @@ class _BaselineAimSelector extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.teal.withValues(alpha: 0.15)
+                      ? AppColors.teal.withOpacity(0.15)
                       : AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(

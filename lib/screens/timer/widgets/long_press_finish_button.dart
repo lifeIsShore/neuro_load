@@ -115,7 +115,7 @@ class _ProgressRingPainter extends CustomPainter {
     if (!isHolding || progress == 0) return;
 
     final paint = Paint()
-      ..color = AppColors.teal.withValues(alpha: 0.5)
+      ..color = AppColors.teal.withOpacity(0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
