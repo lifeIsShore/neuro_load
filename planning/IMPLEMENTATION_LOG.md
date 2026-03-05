@@ -1,5 +1,5 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-05 (Bug fixes: 01 auto-save, 02 quality score, 06 high-contrast, 07 about links, 10 auto-distraction, 11 flow-state copy)  
+**Last Updated:** 2026-03-05 (Bug fixes: 01 auto-save, 02 quality score, 05 retry queue, 06 high-contrast, 07 about links, 09 Android notification action, 10 auto-distraction, 11 flow-state copy)  
 **Author:** AI Engineering Assistant  
 **Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
 
@@ -189,11 +189,30 @@ The **core training loop** is production-quality:
 
 ---
 
-### 🎯 NEXT: Paywall Gate & Stripe (MVP.003.002/003/004)
+---
 
-**Why next?** Core loop, onboarding, analytics, break recovery, and cloud sync are all production-quality. The monetisation gate is the final critical piece before public beta.
+## Bug Fix Log
+
+| Bug | Title | Status | Method |
+|-----|-------|--------|--------|
+| Bug 01 | Long Session Saving | ✅ FIXED | `SessionNotifier._autoSaveProgress()` calls `SessionDao.updateElapsed()` every 300 ticks (5 min). Periodic UPDATE keeps `totalElapsedSeconds` current without closing the session. |
+| Bug 02 | Quality Score Inflation | ✅ FIXED | `SessionState.qualityScore` applies `durationMultiplier = elapsed / 300s` for sessions under 5 min, linearly scaling the raw score down. |
+| Bug 03 | Pause Logic | ⚠️ STALE | No explicit pause feature in codebase. Zombie guardrail handles idle sessions. No action needed. |
+| Bug 04 | Language Selection | ❌ DEFERRED | Requires full i18n system. Deferred to Phase 2. |
+| Bug 05 | Sporadic Progress Saving | ✅ FIXED | New `PendingSessionStore` service serialises failed `finishSession` payloads to SharedPreferences JSON. `AppShell._flushPendingSession()` retries on next launch, shows recovery SnackBar on success. |
+| Bug 06 | High Contrast Non-Functional | ✅ FIXED | `NeuroLoadApp` watches `settingsProvider` and calls `AppTheme.buildTheme(highContrast, fontFamily)`. Factory swaps colorScheme and elevates text colours globally. |
+| Bug 07 | About Section Links | ✅ FIXED | Added `url_launcher: ^6.3.0`. `_launchUrl()` helper opens Privacy Policy, ToS, and Impressum via `LaunchMode.externalApplication`. |
+| Bug 08 | Flip Calibration UX | 🔨 PARTIAL | 3-phase flow and haptic exist. Missing: live visual test confirmation. Queued next. |
+| Bug 09 | Lock Screen Widget | 🔨 PARTIAL (Android ✅) | Android: `AndroidNotificationAction('distracted')` in `showSessionActive`. `NotificationService.onNotificationDistraction` callback registered on session start/resume, cleared on finish/reset. iOS ActivityKit deferred (requires native Swift). |
+| Bug 10 | Auto-Distraction on Flip-Up | ✅ FIXED | `FaceDownNotifier._onEvent` calls `addLap(phone, 'auto: phone flipped up')` on face-up transition during `SessionPhase.active`. |
+| Bug 11 | Onboarding Flow-State Promise | ✅ FIXED | Added 4th `_PrivacyPoint` in `_FounderOathPage` with flow-state promise copy. |
+
+---
+
+### 🎯 NEXT: Stripe Checkout (MVP.003.003)
+
+**Why next?** All bugs addressed. Stripe is the only remaining MVP blocker before public beta.
 
 **What to build:**
-1. **MVP.003.002** — Session-count gate on app launch (redirect to `/paywall` after N free sessions).
-2. **MVP.003.003** — Stripe Checkout via Supabase Edge Function.
-3. **MVP.003.004** — `isUserPaid()` license verification check.
+1. **MVP.003.003** — Stripe Checkout via Supabase Edge Function.
+2. **Bug 08** — Live visual test phase in flip calibration (small, 1 day).

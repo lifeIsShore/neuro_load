@@ -6,6 +6,7 @@ import '../data/app_database.dart';
 import '../data/database_providers.dart';
 import '../services/foreground_service.dart';
 import '../services/notification_service.dart';
+import '../services/pending_session_store.dart';
 import 'sensor_provider.dart' show ZombieSession;
 import 'subscription_provider.dart';
 
@@ -231,6 +232,12 @@ class SessionNotifier extends StateNotifier<SessionState> {
       elapsed: Duration.zero,
     );
 
+    // Bug 09: register the distraction callback so the Android notification
+    // action button can log a lap without needing a BuildContext.
+    NotificationService.onNotificationDistraction = () {
+      addLap(trigger: DistractionTrigger.phone, note: 'via notification');
+    };
+
     // Persist start to DB
     try {
       final dao = _ref.read(sessionDaoProvider);
@@ -312,6 +319,10 @@ class SessionNotifier extends StateNotifier<SessionState> {
       elapsed: elapsed,
       dbSessionId: zombie.dbSessionId,
     );
+    // Re-register the notification distraction callback for the resumed session.
+    NotificationService.onNotificationDistraction = () {
+      addLap(trigger: DistractionTrigger.phone, note: 'via notification');
+    };
   }
 
   void addLap({required DistractionTrigger trigger, String? note}) {
@@ -334,9 +345,10 @@ class SessionNotifier extends StateNotifier<SessionState> {
     final now = DateTime.now();
     state = state.copyWith(phase: SessionPhase.complete, endTime: now);
 
-    // Stop the foreground service + dismiss notifications.
+    // Stop the foreground service, dismiss notifications, unregister callback.
     ForegroundService.stop();
     await NotificationService.dismissSessionNotification();
+    NotificationService.onNotificationDistraction = null; // Bug 09: unregister
     _tickCount = 0;
 
     // Persist finish + laps to DB
@@ -372,8 +384,30 @@ class SessionNotifier extends StateNotifier<SessionState> {
         await lapDao.insertMany(lapEntries);
       }
     } catch (e) {
-      debugPrint('DB finishSession error: $e');
-      return; // don't increment if DB write failed
+      // Bug 05 fix: instead of silently dropping the session, queue it
+      // in SharedPreferences so it can be retried on next app launch.
+      debugPrint('DB finishSession error — queuing for retry: $e');
+      await PendingSessionStore.save(
+        PendingSessionPayload(
+          dbSessionId: dbId,
+          endedAtMs: now.millisecondsSinceEpoch,
+          qualityScore: state.qualityScore,
+          focusDensity: state.focusDensity,
+          oneRmSeconds: state.sessionOneRM.inSeconds,
+          totalElapsedSeconds: state.elapsed.inSeconds,
+          lapCount: state.laps.length,
+          laps: state.laps
+              .map((l) => PendingLap(
+                    sessionId: dbId,
+                    occurredAt: l.timestamp.millisecondsSinceEpoch,
+                    trigger: l.trigger.name,
+                    note: l.note,
+                    lapDurationSeconds: l.lapDurationSeconds,
+                  ))
+              .toList(),
+        ),
+      );
+      return;
     }
 
     // Advance the free-session gate counter.
@@ -383,6 +417,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
   void resetSession() {
     ForegroundService.stop();
     NotificationService.dismissSessionNotification();
+    NotificationService.onNotificationDistraction = null; // Bug 09: unregister
     _tickCount = 0;
     state = const SessionState();
   }

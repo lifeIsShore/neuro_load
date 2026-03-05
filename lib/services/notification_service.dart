@@ -8,9 +8,19 @@ import 'package:timezone/data/latest_all.dart' as tz;
 
 // ── Notification Service ─────────────────────────────────────────────────────
 
+/// Bug 09 (Android) — action button callback.
+/// [SessionNotifier] registers itself here when active so the notification
+/// action can call addLap() without needing a BuildContext or Riverpod ref
+/// from the notification layer.
+typedef DistractionCallback = void Function();
+
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+
+  /// Registered by [SessionNotifier] when a session is active.
+  /// Cleared to null when the session ends.
+  static DistractionCallback? onNotificationDistraction;
 
   static Future<void> initialize() async {
     if (_initialized) return;
@@ -66,13 +76,26 @@ class NotificationService {
   }
 
   static void _onNotificationTapped(NotificationResponse response) {
-    // Deep-link handling — can be extended
-    debugPrint('Notification tapped: ${response.payload}');
+    debugPrint('Notification tapped: id=${response.id} action=${response.actionId} payload=${response.payload}');
+    // Bug 09 (Android): fire the distraction callback when the user taps
+    // the "I Got Distracted" action button on the session notification.
+    if (response.actionId == 'distracted') {
+      onNotificationDistraction?.call();
+    }
   }
 
   // ── Foreground Session Notification ─────────────────────────────────────────
 
-  /// Shows a persistent "session in progress" notification on Android.
+  /// Bug 09 (Android) — action button shown in the ongoing session notification.
+  static const _distractedAction = AndroidNotificationAction(
+    'distracted',
+    'I Got Distracted',
+    showsUserInterface: false, // handles silently; no app re-open needed
+    cancelNotification: false,
+  );
+
+  /// Shows a persistent "session in progress" notification on Android,
+  /// with an "I Got Distracted" action button (Bug 09).
   static Future<void> showSessionActive({
     required String category,
     required Duration elapsed,
@@ -95,6 +118,9 @@ class NotificationService {
           priority: Priority.low,
           showWhen: false,
           icon: '@mipmap/ic_launcher',
+          // Bug 09: action button lets users log a distraction from the
+          // lock screen / notification shade without opening the app.
+          actions: [_distractedAction],
         ),
       ),
       payload: 'session_active',

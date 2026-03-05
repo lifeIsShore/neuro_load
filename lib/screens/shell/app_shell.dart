@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:drift/drift.dart' show Value;
+
 import '../../theme/app_theme.dart';
+import '../../data/app_database.dart';
 import '../../data/database_providers.dart';
 import '../../providers/sensor_provider.dart';
 import '../../providers/session_provider.dart';
+import '../../services/pending_session_store.dart';
 import 'zombie_recovery_modal.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -31,7 +35,62 @@ class _AppShellState extends ConsumerState<AppShell> {
   void initState() {
     super.initState();
     // Perform zombie check once after the first frame so providers are ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkZombie());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _flushPendingSession();
+      _checkZombie();
+    });
+  }
+
+  /// Bug 05 — Retry flush: attempt to write any queued failed session
+  /// to Drift. Runs once per launch before the zombie check.
+  Future<void> _flushPendingSession() async {
+    final payload = await PendingSessionStore.load();
+    if (payload == null) return;
+
+    debugPrint('[PendingFlush] Retrying session ${payload.dbSessionId}...');
+    try {
+      final sessionDao = ref.read(sessionDaoProvider);
+      final lapDao = ref.read(lapDaoProvider);
+
+      await sessionDao.finishSession(
+        id: payload.dbSessionId,
+        endedAtMs: payload.endedAtMs,
+        qualityScore: payload.qualityScore,
+        focusDensity: payload.focusDensity,
+        oneRmSeconds: payload.oneRmSeconds,
+        totalElapsedSeconds: payload.totalElapsedSeconds,
+        lapCount: payload.lapCount,
+      );
+
+      if (payload.laps.isNotEmpty) {
+        final lapEntries = payload.laps
+            .map((l) => LapsCompanion(
+                  sessionId: Value(l.sessionId),
+                  occurredAt: Value(l.occurredAt),
+                  trigger: Value(l.trigger),
+                  note: Value(l.note),
+                  lapDurationSeconds: Value(l.lapDurationSeconds),
+                ))
+            .toList();
+        await lapDao.insertMany(lapEntries);
+      }
+
+      await PendingSessionStore.clear();
+      debugPrint('[PendingFlush] Session ${payload.dbSessionId} saved successfully.');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Recovered a session from your last run. ✓'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      // Still failing — leave the payload in the queue for next launch.
+      debugPrint('[PendingFlush] Retry failed again: $e');
+    }
   }
 
   Future<void> _checkZombie() async {
