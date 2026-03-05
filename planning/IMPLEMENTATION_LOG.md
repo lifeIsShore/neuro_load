@@ -1,224 +1,353 @@
 # NeuroLoad — Implementation Log
-**Last Updated:** 2026-03-05 (Bug fixes: 01, 02, 05, 06, 07, 09-Android, 10, 11 + GitHub Actions CI/CD + runway/ folder created)  
-**Author:** AI Engineering Assistant  
-**Purpose:** Track which user stories are done, in-progress, or pending, with prerequisites noted for the dev team.
+**Last Updated:** 2026-03-05 (Full audit pass — stale rows removed, silent gaps added, Sprint 4 defined)
+**Author:** AI Engineering Assistant
+**Purpose:** Single source of truth for implementation status, audit findings, and next sprint tasks.
+**Audit Report:** Full source-verified breakdown → `runway/AUDIT_REPORT.md`
 
 ---
 
 ## Legend
-- ✅ **DONE** — Fully implemented and wired up
-- 🔨 **PARTIAL** — UI/shell exists, but backend logic is a stub or TODO
-- ❌ **NOT STARTED** — No code exists for this story
-- 🔒 **BLOCKED** — Cannot start until a prerequisite is done
+- ✅ **DONE** — Fully implemented, source-verified
+- 🔨 **PARTIAL** — Shell exists, specific piece confirmed missing in source
+- ❌ **NOT STARTED** — No code exists
+- 🔒 **BLOCKED** — Waiting on a prerequisite
+- ⚠️ **STALE** — Bug/feature written against a design that was never built
 
 ---
 
-## EPIC 0 — Onboarding (The 4-Step Indoctrination)
+## ─────────────────────────────────────────────
+## EPIC 0 — Onboarding
+## ─────────────────────────────────────────────
 
-| Story | Title | Status | Notes |
-|-------|-------|--------|-------|
-| MVP.000.001 | The Manifesto Screen | ✅ DONE | Typewriter animation, scroll-to-unlock, `has_completed_onboarding` SharedPrefs flag — all implemented in `onboarding_screen.dart` |
-| MVP.000.002 | Lap Mechanic Tutorial | ✅ DONE | Interactive mock DISTRACTED button with haptic, tap-to-proceed logic in `_LapTutorialPage` |
-| MVP.000.003 | Sensor Calibration | ✅ DONE | `_SensorCalibrationPage` converted to `StatefulWidget` — 3-phase flow (idle → sampling → done), live `accelerometerEventStream` + 3-sample averaging, animated teal arc painter, `SharedPreferences.setDouble('sensor_z_baseline')` persisted on finish; Skip fallback for emulators. `FaceDownNotifier` reads the baseline at startup via `_loadThresholdThenSubscribe()` |
-| MVP.000.004 | Intent Statement Practice | ✅ DONE | Text input with 10-char minimum validation, in `_IntentPracticePage` |
-| MVP.000.005 | Baseline Test (5-min timer) | ✅ DONE | `_BaselineTestPage` converted to `StatefulWidget` — 3-phase flow (idle → running → done), live `MM:SS` countdown ring (5 min), "I Got Distracted" lap button with counter, `SessionDao.insertSession()` on begin + `finishSession()` on completion, quality/1RM computed from lap count; Skip link always visible (no DB write on skip) |
-| MVP.000.006 | Founder's Oath / Privacy Overview | ✅ DONE | Three privacy bullet points, "I Agree" button sets the onboarding flag and navigates to `/setup` |
+| Story | Title | Status | Source-Verified Notes |
+|-------|-------|--------|-----------------------|
+| MVP.000.001 | The Manifesto Screen | ✅ DONE | Typewriter animation, scroll-to-unlock, `has_completed_onboarding` flag in `onboarding_screen.dart` |
+| MVP.000.002 | Lap Mechanic Tutorial | ✅ DONE | Interactive mock DISTRACTED button, tap-to-proceed in `_LapTutorialPage` |
+| MVP.000.003 | Sensor Calibration | 🔨 PARTIAL | 3-phase idle→sampling→done, live Z readout, arc painter, haptic, baseline saved to SharedPrefs ✅. **Missing: 4th "testing" phase** — user never asked to flip phone to confirm threshold works. See Sprint 4. |
+| MVP.000.004 | Intent Statement Practice | ✅ DONE | TextField + 10-char min validation in `_IntentPracticePage` |
+| MVP.000.005 | Baseline Test (5-min timer) | ✅ DONE | Full embedded countdown, lap counter, `SessionDao.insertSession` + `finishSession` on complete, Skip link |
+| MVP.000.006 | Founder's Oath / Privacy Overview | ✅ DONE | 4 `_PrivacyPoint` entries incl. flow-state promise (Bug 11), "I Agree" sets flag + routes to `/setup` |
 
 ---
 
+## ─────────────────────────────────────────────
 ## EPIC 1 — Core Timer & Session Management
+## ─────────────────────────────────────────────
 
-| Story | Title | Status | Notes |
-|-------|-------|--------|-------|
-| MVP.001.001 | Start Session Manually | ✅ DONE | Category selector enables Start button; `startSession()` writes to Drift DB and navigates to `/timer` |
-| MVP.001.002 | Start via Face-Down Trigger | ✅ DONE | `sensor_provider.dart` + `faceDownStartProvider` drives automatic session start from setup screen with haptic confirm |
-| MVP.001.003 | Breathing Ring (Chronometer Design) | ✅ DONE | `BreathingRing` widget — custom painter, 10-second sine pulse animation, continuous regardless of clock visibility |
-| MVP.001.004 | Ambient Display / Hide Timer Text | ✅ DONE | Double-tap `GestureDetector` toggles `_showClock` with `AnimatedOpacity` (400ms) |
-| MVP.001.005 | Distracted Button | ✅ DONE | 88dp height, heavy haptic on tap, session continues, lap appended to Riverpod state |
-| MVP.001.006 | Distraction Classification Modal | ✅ DONE | `DistractionModal` bottom sheet with 6 trigger icons (Phone, Noise, Need, Thought, Fatigue, Involuntary), 5-second progress bar |
-| MVP.001.007 | Lap Text Field (4-word note) | ✅ DONE | Optional text input shown after icon selected, word-count validation in `distraction_modal.dart` |
-| MVP.001.008 | 5-Second Auto-Dismiss | ✅ DONE | `Future.delayed(5s)` auto-closes modal and defaults to `DistractionTrigger.involuntary` |
-| MVP.001.009 | End Session (Long-Press Finish) | ✅ DONE | `LongPressFinishButton` widget with circular fill animation over 2 seconds; cancels if released early |
-| MVP.001.010 | Quality Score Calculation | ✅ DONE | `SessionState.qualityScore` computed from focus density minus lap penalty; persisted via `finishSession()` |
-| MVP.001.011 | Post-Session Summary Screen | ✅ DONE | `SummaryScreen` shows Quality Score card, Session 1RM, Focus Density, Lap count, Top Distraction trigger |
-| MVP.001.012 | Zombie Session Guardrail | ✅ DONE | `zombieSessionProvider` in `sensor_provider.dart` queries `findIncomplete()` on launch; `AppShell.initState` calls `_checkZombie()` via `addPostFrameCallback` and invokes `resumeZombieSession()` on confirm |
-| MVP.001.013 | Recovery Modal (After Zombie) | ✅ DONE | `ZombieRecoveryModal` in `zombie_recovery_modal.dart` — pulsing red icon, info chip (category + elapsed), Resume CTA, 2-step Discard confirm (Keep / Yes Discard), `AnimatedSwitcher` transition |
-| US 1.9 | Haptic Milestones (10-min ticks) | ✅ DONE | `_checkHapticMilestone()` in timer triggers `HapticFeedback.lightImpact()` at every 600 seconds |
+| Story | Title | Status | Source-Verified Notes |
+|-------|-------|--------|-----------------------|
+| MVP.001.001 | Start Session Manually | ✅ DONE | Category selector gates Start; `startSession()` writes Drift row, navigates `/timer` |
+| MVP.001.002 | Start via Face-Down Trigger | ✅ DONE | `faceDownStartProvider` → haptic confirm → auto-start in setup screen |
+| MVP.001.003 | Breathing Ring | ✅ DONE | `BreathingRing` custom painter, 10s sine pulse, continuous |
+| MVP.001.004 | Ambient Display / Hide Timer | ✅ DONE | Double-tap toggles `AnimatedOpacity` on clock text |
+| MVP.001.005 | Distracted Button | ✅ DONE | 88dp, `HapticFeedback.heavyImpact()`, lap appended to state |
+| MVP.001.006 | Distraction Classification Modal | ✅ DONE | `DistractionModal` — 6 icons, 5s progress bar |
+| MVP.001.007 | Lap Text Field (4-word note) | ✅ DONE | Word-count validation, optional note saved to `Lap` |
+| MVP.001.008 | 5-Second Auto-Dismiss | ✅ DONE | `Future.delayed(5s)` → `DistractionTrigger.involuntary` default |
+| MVP.001.009 | End Session (Long-Press Finish) | ✅ DONE | `LongPressFinishButton` — 2s hold, animated fill ring |
+| MVP.001.010 | Quality Score Calculation | ✅ DONE | `qualityScore` = density − lap penalty × `durationMultiplier`; persisted on finish (Bug 02 fixed) |
+| MVP.001.011 | Post-Session Summary Screen | ✅ DONE | Quality card, 1RM, density, lap count, top trigger on `SummaryScreen` |
+| MVP.001.012 | Zombie Session Guardrail | ✅ DONE | `zombieSessionProvider` → `findIncomplete()` → `AppShell._checkZombie()` |
+| MVP.001.013 | Recovery Modal | ✅ DONE | `ZombieRecoveryModal` — Resume / 2-step Discard, `resumeZombieSession()` |
+| US 1.2 | Sub-Category Auto-Suggest | 🔨 PARTIAL | TextField exists. **Top-5 historical suggestions from DB not implemented.** See Sprint 5. |
+| US 1.3 | Baseline Aim (+5% PB Nudge) | 🔨 PARTIAL | Target duration stored in state. **"+5% from last 3 sessions" display on setup screen not implemented.** See Sprint 5. |
+| US 1.9 | Haptic Milestones | ✅ DONE | `_checkHapticMilestone()` — `lightImpact()` every 600s |
+| US 2.4 | "One More Rep" Nudge | ❌ NOT STARTED | `LongPressFinishButton.onFinished` goes straight to finish. No PB proximity check before completing. |
+| US 4.8 | Ghost Intent Flash on Modal Timeout | ❌ NOT STARTED | Modal auto-dismisses after 5s but never flashes session intent before closing. |
 
 ---
 
+## ─────────────────────────────────────────────
 ## EPIC 2 — Local Analytics & Dashboard
+## ─────────────────────────────────────────────
 
-| Story | Title | Status | Notes |
-|-------|-------|--------|-------|
-| MVP.002.001 | 24-Hour Circular Focus Ring | ✅ DONE | Old 90-day grid replaced with `_CircularHeatmap` — 24-segment clock ring `CustomPainter`; arc width + opacity scale with total focus minutes per hour; peak-hour label in center; intensity gradient legend; tap to toggle to 90-day `_GridView` fallback; fade-in animation via `AnimationController`; no new deps |
-| MVP.002.002 | 1RM Tracking | ✅ DONE | `allTimeOneRmProvider` queries DB; KPI card shows all-time 1RM; line chart `_OneRMLineChart` shows 1RM progression over sessions |
-| MVP.002.003 | Distraction Trigger Breakdown | ✅ DONE | `_DistractionDoughnut` pie/donut chart via `fl_chart`; uses `triggerCountMapProvider`; handles empty state |
-| MVP.002.004 | Category-Specific Analytics Filter | ✅ DONE | `categoryFilterProvider` StateProvider drives filtered DAO queries; horizontal `ChoiceChip` row (All/Study/Work/Creative/Admin/Lifestyle) in Dashboard; all KPI cards, heatmap, donut, and 1RM chart react to filter changes |
-| US 3.3 | Focus Density KPI | ✅ DONE | `avgFocusDensityProvider` shown as a KPI card |
-| US 3.8 | Trophy Room | ✅ DONE | `TrophyRoomScreen` built at `/trophies`; shows top 5 sessions by 1RM; dashboard card wired |
-| US 4.1 | Coach — Silent Week / Baseline Gate | ✅ DONE | `CoachEngine._baselineThreshold = 10`; shows "X sessions until Coach Intelligence unlocks" until threshold |
-| US 4.2 | Coach — +5% Next Aim Suggestion | ✅ DONE | `CoachEngine` generates `nextAimSuggestion` after baseline; `nextAimProvider` available |
-| US 4.3 | Coach — De-load Warning | ✅ DONE | Detects >15pt quality drop over last 3 sessions and surfaces `deloadWarning` insight |
-| US 4.x | Coach — PB Detection | ✅ DONE | Detects if latest session 1RM equals all-time 1RM and flashes "New All-Time 1RM!" insight |
-| US 4.x | Coach — Distraction Pattern | ✅ DONE | Identifies top trigger category and shows percentage insight |
-
----
-
-## EPIC 3 — Monetization & Licensing
-
-| Story | Title | Status | Notes |
-|-------|-------|--------|-------|
-| MVP.003.001 | Dynamic Pricing Display | ✅ DONE | `PaywallScreen` upgraded to `ConsumerStatefulWidget`; €49 lifetime price, feature list (incl. 24-hr Focus Ring), scarcity badge — all hardcoded pending Supabase dynamic pricing |
-| MVP.003.002 | Forced Paywall After One Session | ✅ DONE | `subscription_provider.dart`: `isPaidProvider` + `freeSessionsUsedProvider` (SharedPrefs-backed); `paywallGateProvider`; `finishSession()` calls `freeSessionsUsed.increment()`; GoRouter global redirect intercepts shell paths when gate fires |
-| MVP.003.003 | Stripe Checkout Integration | ❌ NOT STARTED | "Buy Now" shows SnackBar stub + TODO comment; no Supabase Edge Function created |
-| MVP.003.004 | License Status Verification | ✅ DONE | `isPaidProvider` (SharedPrefs `subscription_is_paid`); Settings screen shows live 'PLUS ✓' (teal) / 'FREE' (amber) chip; Upgrade tile hidden when paid; voucher redemption calls `markPaid()` with 800ms simulated RPC delay |
-| MVP.003.005 | GDPR Data Export (CSV) | ✅ DONE | Settings "Export Data" runs `ExportService.exportAllData()` using `share_plus` to generate `sessions.csv` and `laps.csv` |
-| MVP.003.006 | GDPR Delete Account (Wipe Data) | ✅ DONE | Wipes DB (laps then sessions), clears `SharedPreferences`, and resets memory state when confirmed |
+| Story | Title | Status | Source-Verified Notes |
+|-------|-------|--------|-----------------------|
+| MVP.002.001 | 24-Hour Circular Focus Ring | ✅ DONE | `_CircularHeatmap` CustomPainter, 24-segment clock ring, arc width+opacity by focus minutes, peak-hour label, tap-toggle to 90-day grid |
+| MVP.002.002 | 1RM Tracking | ✅ DONE | `allTimeOneRmProvider`, KPI card, `_OneRMLineChart` progression |
+| MVP.002.003 | Distraction Trigger Breakdown | ✅ DONE | `_DistractionDoughnut` via `fl_chart`, `triggerCountMapProvider` |
+| MVP.002.004 | Category Filter | ✅ DONE | `categoryFilterProvider` → all 7 providers filtered → `ChoiceChip` row |
+| US 3.2 | Distraction Danger Zones | ❌ NOT STARTED | Heatmap shows focus time only. No lap-density overlay or danger-zone highlighting. |
+| US 3.3 | Focus Density KPI | ✅ DONE | `avgFocusDensityProvider` KPI card |
+| US 3.4 | Resilience KPI | ❌ NOT STARTED | `Lap.lapDurationSeconds` is time between laps, not modal-dismiss delta. No tracking, no UI card. |
+| US 3.8 | Trophy Room | ✅ DONE | `TrophyRoomScreen` at `/trophies`, top 5 by 1RM |
+| US 4.1 | Coach — Baseline Gate | ✅ DONE | `CoachEngine._baselineThreshold = 10`; progress text until unlocked |
+| US 4.2 | Coach — +5% Next Aim | ✅ DONE | `nextAimSuggestion` generated post-baseline |
+| US 4.3 | Coach — De-load Warning | ✅ DONE | >15pt quality drop over 3 sessions → `deloadWarning` |
+| US 4.x | Coach — PB Detection | ✅ DONE | Latest 1RM == all-time 1RM → "New All-Time 1RM!" insight |
+| US 4.x | Coach — Distraction Pattern | ✅ DONE | Top trigger + percentage insight |
+| US 4.4 | Coach — Contextual Leak | ❌ NOT STARTED | Cross-category 1RM delta analysis not in `CoachEngine`. |
+| US 4.5 | Coach — Strategy Recommendations | ❌ NOT STARTED | Static mitigation map not implemented. |
 
 ---
 
-## EPIC 5 — Security & Privacy (local)
+## ─────────────────────────────────────────────
+## EPIC 3 — Monetisation & Licensing
+## ─────────────────────────────────────────────
 
-| Story | Title | Status | Notes |
-|-------|-------|--------|-------|
-| US 5.1 | Local-First Data Storage (Drift) | ✅ DONE | All data stored in Drift SQLite (`app_database.dart`); sessions and laps persisted on finish |
-| US 5.3 | Data Export | ✅ DONE | See MVP.003.005 above |
-| US 5.4 | Cloud Sync (Opt-In, Paid) | ✅ DONE | `SettingsScreen` wires Cloud Sync toggle → `SupabaseSyncService.syncAll()`; Supabase URL + Anon Key entry via bottom sheet; `testConnection()` ping on save; live sync status chip (↺ / ✓ / ✗) |
-| US 5.5 | Strict Privacy Toggle (Local Notes) | ✅ DONE | `SupabaseSyncService.syncAll(localOnlyNotes: bool)` — when true, `note` field is `null`-ed on all lap payloads before upload |
+| Story | Title | Status | Source-Verified Notes |
+|-------|-------|--------|-----------------------|
+| MVP.003.001 | Dynamic Pricing Display | 🔨 PARTIAL | `PaywallScreen` built, €49 hardcoded. **Supabase-dynamic pricing not wired.** |
+| MVP.003.002 | Forced Paywall After One Session | ✅ DONE | `paywallGateProvider` + GoRouter redirect; `freeSessionsUsedProvider` incremented on finish |
+| MVP.003.003 | Stripe Checkout Integration | ❌ NOT STARTED | "Buy Now" is a SnackBar stub. No Supabase Edge Function, no URL launch. |
+| MVP.003.004 | License Status Verification | ✅ DONE | `isPaidProvider`, PLUS/FREE chip, voucher redemption stub |
+| MVP.003.005 | GDPR Data Export | ✅ DONE | `ExportService.exportAllData()` → `share_plus` → sessions.csv + laps.csv |
+| MVP.003.006 | GDPR Wipe Data | ✅ DONE | Laps → sessions delete, `SharedPreferences.clear()`, in-memory reset |
 
 ---
 
+## ─────────────────────────────────────────────
+## EPIC 5 — Security & Privacy
+## ─────────────────────────────────────────────
+
+| Story | Title | Status | Source-Verified Notes |
+|-------|-------|--------|-----------------------|
+| US 5.1 | Local-First Storage (Drift) | ✅ DONE | All data in Drift SQLite, no cloud write on default |
+| US 5.3 | Data Export | ✅ DONE | See MVP.003.005 |
+| US 5.4 | Cloud Sync (Opt-In) | ✅ DONE | `SupabaseSyncService.syncAll()`, credentials bottom sheet, status chip |
+| US 5.5 | Strict Privacy Toggle | ✅ DONE | `localOnlyNotes` nullifies lap notes before upload |
+
+---
+
+## ─────────────────────────────────────────────
 ## EPIC 7 — Hardware & System Polish
+## ─────────────────────────────────────────────
 
-| Story | Title | Status | Notes |
-|-------|-------|--------|-------|
-| US 7.1 | Lap Feed UI | ✅ DONE | `LapFeed` widget with `ListView.builder` shows a chronological list of laps with trigger emoji and note |
-| US 7.3 | Adaptive Sensor Polling | ✅ DONE | `FaceDownNotifier` now accepts `Ref`; listens to `sessionProvider.phase`; uses 200 ms sampling when `SessionPhase.active`, 2000 ms otherwise; stream cancelled & recreated on phase change |
-| US 7.4 | Live Activities (iOS) | ❌ NOT STARTED | Not implemented |
-| US 7.5 | Foreground Service (Android) | ✅ DONE | `flutter_foreground_task: ^9.2.0` added; `ForegroundTaskHandler` (new) drives 1-second tick in FGS isolate → `sendDataToMain('tick')` → `sessionNotifier.tick()` in main isolate via `addTaskDataCallback`; `ForegroundService` wrapper (new) exposes `start/stop`; `TimerScreen` switched from `Timer.periodic` to FGS callbacks; `finishSession()` / `resetSession()` both call `ForegroundService.stop()` as safety net; `AndroidManifest.xml` updated with `FOREGROUND_SERVICE_SPECIAL_USE` permission + service declaration |
-| US 2.1 | Dynamic Break Earning | ✅ DONE | `SessionState.earnedBreakDuration` computed from quality score × elapsed time (clamped 5–25 min); `_EarnedBreakBanner` on `SummaryScreen`; `/break` GoRoute passes `Duration` extra; `BreakTimerScreen` pre-selects earned duration with ★ EARNED badge |
-| US 2.2 | Break UI Color Shift | ✅ DONE | `BreakTimerScreen` uses teal/sage palette distinct from session mode |
-
----
-
-## EPIC 8 — Onboarding Full Spec Gaps
-*(See Epic 0 table above for current status. Additional story-level gaps:)*
-
-- **MVP.000.003 Sensor Calibration** — Missing actual sensor reads and baseline storage. Needs `sensors_plus` stream listener, 3-sample averaging, and `SharedPreferences.setDouble()` writes.
-- **MVP.000.005 Baseline Test** — Should launch an embedded timer (reusing `TimerScreen` logic), record laps, and save session to DB before proceeding to oath screen.
+| Story | Title | Status | Source-Verified Notes |
+|-------|-------|--------|-----------------------|
+| US 2.1 | Dynamic Break Earning | ✅ DONE | `earnedBreakDuration` computed; `_EarnedBreakBanner` on Summary; `/break` GoRoute |
+| US 2.2 | Break UI Color Shift | ✅ DONE | `BreakTimerScreen` uses teal/sage palette |
+| US 2.3 | Break Notifications | ❌ NOT STARTED | `NotificationService.showRestComplete()` exists but is **never called** from `BreakTimerScreen`. T-60s chime also missing. |
+| US 7.1 | Lap Feed UI | ✅ DONE | `LapFeed` with `ListView.builder`, trigger emoji + note |
+| US 7.3 | Adaptive Sensor Polling | ✅ DONE | 200ms active / 2000ms idle, stream recreated on phase change |
+| US 7.4 | Live Activities (iOS) | ❌ NOT STARTED | Requires native Swift ActivityKit. Deferred. |
+| US 7.5 | Foreground Service (Android) | ✅ DONE | `flutter_foreground_task`, `ForegroundTaskHandler`, tick→main isolate, `AndroidManifest.xml` |
 
 ---
 
-## EPIC 9 — Phase 2, 3 & 4 (The Complete Backlog)
-*Features deferred from the MVP to focus on core functionality, mapping to Epics 11, 12, & 13 from the comprehensive PRD.*
+## ─────────────────────────────────────────────
+## EPIC 9 — Phase 2 / 3 / 4 Backlog
+## ─────────────────────────────────────────────
 
-| Story | Title | Phase | Status | Notes |
-|-------|-------|-------|--------|-------|
-| US 9.1 | Invoice Generation | Phase 2 | ❌ NOT STARTED | Tax deduction receipts (Resend API template) |
-| US 9.2 | Calendar Task Import | Phase 2 | ❌ NOT STARTED | Fetch intent from Google/Apple Calendar |
-| US 9.3 | Circadian Rhythm Analysis | Phase 2 | ❌ NOT STARTED | Time-of-day heatmap for "Prime Time" detection |
-| US 9.4 | Ghost Intent Reminder | Phase 2 | ❌ NOT STARTED | Shows pre-flow intent when distracted to redirect focus |
-| US 9.5 | Next.js B2B Web Portal | Phase 3 | ❌ NOT STARTED | Organization management, aggregate analytics |
-| US 9.6 | Smart Coach ML (ARIMA) | Phase 3 | ❌ NOT STARTED | Advanced forecasting and anomaly detection |
-| US 9.7 | NeuroLoad Plus Upsell | Phase 3 | ❌ NOT STARTED | Subscription paywall for advanced analytics/sync |
-| US 9.8 | Dyslexia-Friendly Typography | Phase 3 | ❌ NOT STARTED | `OpenDyslexic` font toggle in settings |
-| US 9.9 | Screen-Reader & VoiceOver | Phase 3 | ❌ NOT STARTED | Full EAA accessibility semantics |
-| US 9.10 | The "Soundscape" Engine | Phase 4 | ❌ NOT STARTED | Binaural beats/white noise audio player |
-| US 9.11 | Study Lounges & Battles | Phase 4 | ❌ NOT STARTED | Realtime social accountability / 1v1 focus duels |
-| US 9.12 | Global Focus Leaderboards | Phase 4 | ❌ NOT STARTED | Weekly resetting ranks (The Tank, The Monk) |
-| US 9.13 | "Focus Resume" PDF Export | Phase 4 | ❌ NOT STARTED | Generates professional PDF resume of focus stats |
-
----
-
-## Key Technical Gaps Summary
-
-| Priority | Gap | Affected Stories |
-|----------|-----|-----------------|
-| 🔴 HIGH | Paywall gate not wired to app startup | MVP.003.002, MVP.003.004 |
-| 🔴 HIGH | Stripe Checkout not integrated | MVP.003.003 |
-| 🟡 MED | Heatmap is daily grid, not 24-hour circular | MVP.002.001 |
-| 🟢 LOW | Adaptive sensor polling not throttled | US 7.3 |
-| 🟢 LOW | iOS Live Activities not started | US 7.4 |
+| Story | Title | Phase | Status |
+|-------|-------|-------|--------|
+| US 9.1 | Invoice Generation (Resend API) | 2 | ❌ NOT STARTED |
+| US 9.2 | Calendar Task Import | 2 | ❌ NOT STARTED |
+| US 9.3 | Circadian Rhythm Analysis | 2 | ❌ NOT STARTED |
+| US 9.4 | Ghost Intent Reminder | 2 | ❌ NOT STARTED |
+| US 9.5 | Next.js B2B Web Portal | 3 | ❌ NOT STARTED |
+| US 9.6 | Smart Coach ML (ARIMA) | 3 | ❌ NOT STARTED |
+| US 9.7 | NeuroLoad Plus Upsell | 3 | ❌ NOT STARTED |
+| US 9.8 | Dyslexia-Friendly Typography (OpenDyslexic) | 3 | ❌ NOT STARTED |
+| US 9.9 | Screen-Reader & VoiceOver | 3 | ❌ NOT STARTED |
+| US 9.10 | Soundscape Engine | 4 | ❌ NOT STARTED |
+| US 9.11 | Study Lounges & Battles | 4 | ❌ NOT STARTED |
+| US 9.12 | Global Focus Leaderboards | 4 | ❌ NOT STARTED |
+| US 9.13 | Focus Resume PDF Export | 4 | ❌ NOT STARTED |
 
 ---
 
-## What's in Excellent Shape ✅
+## ─────────────────────────────────────────────
+## BUG FIX LOG
+## ─────────────────────────────────────────────
 
-The **core training loop** is production-quality:
-- Full 6-page onboarding flow with real interactions (typewriter, scroll gate, haptics)
-- Setup screen: category, sub-category, baseline aim, intent, face-down sensor trigger
-- Timer: breathing ring, ambient mode, haptic milestones, distraction modal with 6 icons + 5s auto-dismiss + 4-word notes, lap feed timeline, long-press finish
-- Summary: quality score card with animated counter, 1RM display, focus density, top trigger
-- Dashboard: 1RM KPI, avg density KPI, session count, 90-day heatmap, distraction doughnut, 1RM line chart, coach insights
-- Coach engine: baseline gate, +5% aim, de-load warning, PB detection, distraction pattern
-- Settings: cloud sync toggle, local-only notes toggle, high contrast toggle, danger zone (wipe) dialog stub
-- Database: Drift schema (Sessions, Laps, AppSettings), DAOs, all KPIs computed and persisted
-
----
-
-## Recommended Next Implementation Brick
-
-### ✅ COMPLETED: Zombie Session Recovery (MVP.001.012 + MVP.001.013)
-
-`zombieSessionProvider` → `findIncomplete()` DB query → `AppShell._checkZombie()` launch hook → `ZombieRecoveryModal` with Resume / 2-step Discard → `resumeZombieSession()` restores full session state. All wired and verified.
+| Bug | Title | True Status | Method / Notes |
+|-----|-------|-------------|----------------|
+| Bug 01 | Long Session Saving | ✅ FIXED | `_autoSaveProgress()` every 300 ticks → `SessionDao.updateElapsed()` UPDATE-only |
+| Bug 02 | Quality Score Inflation | ✅ FIXED | `durationMultiplier = elapsed / 300s` applied to raw score for sub-5-min sessions |
+| Bug 03 | Pause Logic Too Generous | ⚠️ STALE | No pause feature or phase exists in codebase. `SessionPhase` = idle/active/rest/complete. Closing as WONTFIX. |
+| Bug 04 | Language Selection | ❌ DEFERRED | No i18n system. Requires `flutter_localizations` + ARB files + language page in onboarding. Phase 2. |
+| Bug 05 | Sporadic DB Write Failure | ✅ FIXED | `PendingSessionStore` queues payload to SharedPrefs on catch; `AppShell._flushPendingSession()` retries on launch |
+| Bug 06 | High Contrast Non-Functional | 🔨 PARTIAL | Theme rebuilds wired ✅. **Font picker tile `onTap: () {}` stub — no picker UI.** Sprint 4. |
+| Bug 07 | About Section Links | ✅ FIXED (MVP) | `url_launcher`, `_launchUrl()`, 3 URLs wired. Locale-aware URLs blocked by Bug 04. |
+| Bug 08 | Flip Calibration UX | 🔨 PARTIAL | 3-phase flow + arc + haptic ✅. **4th testing phase (flip-to-confirm) missing.** Sprint 4. |
+| Bug 09 | Lock Screen Widget | 🔨 PARTIAL | Android `AndroidNotificationAction` + callback wired ✅. iOS ActivityKit deferred. |
+| Bug 10 | Auto-Distraction on Flip-Up | ✅ FIXED | `FaceDownNotifier._onEvent` → `addLap(phone, 'auto: phone flipped up')` when phase==active |
+| Bug 11 | Flow State Promise | ✅ FIXED | 4th `_PrivacyPoint` in `_FounderOathPage` with `Icons.psychology_outlined` |
 
 ---
 
-### ✅ COMPLETED: Real Sensor Calibration in Onboarding (MVP.000.003)
+## ─────────────────────────────────────────────
+## AUDIT — SILENT GAPS (found 2026-03-05)
+## These were never tracked. Now formally logged.
+## ─────────────────────────────────────────────
 
-`_SensorCalibrationPage` → StatefulWidget → 3-phase flow (idle/sampling/done) → live `accelerometerEventStream` → 3-sample averaging with animated teal arc → `SharedPreferences.setDouble('sensor_z_baseline')` → `FaceDownNotifier._loadThresholdThenSubscribe()` picks up the value at startup. Skip fallback for emulators.
-
----
-
-### ✅ COMPLETED: Category Filter for Dashboard (MVP.002.004)
-
-`categoryFilterProvider` StateProvider → all 7 analytics providers rewired to `ref.watch(categoryFilterProvider)` → filtered DAO methods in `SessionDao` + `LapDao` → `_CategoryChip` widget with `ChoiceChip` row in `DashboardScreen`. All KPIs, heatmap, donut chart, and 1RM line chart react to category selection.
-
----
-
-### ✅ COMPLETED: Dynamic Break Earning (US 2.1)
-
-`SessionState.earnedBreakDuration` computed property → quality score × elapsed time scaling → clamped 5–25 min → `_EarnedBreakBanner` banner on `SummaryScreen` → primary CTA navigates to `/break` with `Duration` extra → `BreakTimerScreen` accepts `earnedDuration` param, pre-selects it, shows ★ EARNED badge; scrollable 5-chip preset row.
-
----
-
-### ✅ COMPLETED: Cloud Sync Wire-Up (US 5.4 + US 5.5)
-
-`SupabaseSyncService.syncAll(localOnlyNotes: bool)` → strips lap notes when privacy mode active → `testConnection()` ping method → `SettingsScreen` rewritten with Supabase config bottom sheet (URL + Anon Key), save+test flow, live sync status chip, and "Sync Now" manual trigger tile.
+| ID | Gap | File | Priority |
+|----|-----|------|----------|
+| GAP-001 | `settingsProvider` is **in-memory only** — high contrast + font selection lost on every app restart | `lib/providers/session_provider.dart` → `SettingsNotifier` | 🔴 P1 |
+| GAP-002 | **Font picker tile** has `onTap: () {}` — user can toggle high contrast but cannot select a font | `lib/screens/settings/settings_screen.dart` line ≈195 | 🔴 P1 |
+| GAP-003 | **`/timer` route guard missing** — navigating to `/timer` with no active session shows a blank/broken screen | `lib/router.dart` | 🔴 P1 |
+| GAP-004 | **`NotificationService.showRestComplete()`** exists but is never called from `BreakTimerScreen` (US 2.3) | `lib/screens/break/break_timer_screen.dart` | 🟡 P1 |
+| GAP-005 | **"One More Rep" nudge** (US 2.4) — `LongPressFinishButton.onFinished` has no PB proximity check | `lib/screens/timer/timer_screen.dart` `_finishSession()` | 🟡 P1 |
+| GAP-006 | **Ghost Intent flash** (US 4.8) — `DistractionModal` auto-dismiss does not flash intent before closing | `lib/screens/timer/widgets/distraction_modal.dart` | 🟡 P1 |
+| GAP-007 | **Sub-category auto-suggest** (US 1.2) — plain TextField, no DB history lookup | `lib/screens/setup/setup_screen.dart` | 🟢 P2 |
+| GAP-008 | **Baseline Aim +5% nudge display** (US 1.3) — target duration in state, setup screen doesn't show PB-based suggestion | `lib/screens/setup/setup_screen.dart` | 🟢 P2 |
+| GAP-009 | **Resilience KPI** (US 3.4) — `Lap.lapDurationSeconds` is lap-to-lap, not modal-dismiss delta. No UI card. | `lib/data/tables.dart`, `lib/providers/session_provider.dart` | 🟢 P2 |
+| GAP-010 | **Distraction Danger Zones** (US 3.2) — heatmap shows focus time only, no lap-density overlay | `lib/screens/dashboard/dashboard_screen.dart` | 🟢 P2 |
+| GAP-011 | **Contextual Leak coach insight** (US 4.4) — cross-category 1RM delta not in `CoachEngine` | `lib/services/coach_engine.dart` | 🟢 P2 |
+| GAP-012 | **Strategy Recommendations** (US 4.5) — static mitigation text map not implemented | `lib/services/coach_engine.dart` | 🟢 P2 |
 
 ---
 
----
+## ─────────────────────────────────────────────
+## STALE LOG ENTRIES — CORRECTED
+## Items that were WRONG in previous log versions
+## ─────────────────────────────────────────────
 
-## Bug Fix Log
-
-| Bug | Title | Status | Method |
-|-----|-------|--------|--------|
-| Bug 01 | Long Session Saving | ✅ FIXED | `SessionNotifier._autoSaveProgress()` calls `SessionDao.updateElapsed()` every 300 ticks (5 min). Periodic UPDATE keeps `totalElapsedSeconds` current without closing the session. |
-| Bug 02 | Quality Score Inflation | ✅ FIXED | `SessionState.qualityScore` applies `durationMultiplier = elapsed / 300s` for sessions under 5 min, linearly scaling the raw score down. |
-| Bug 03 | Pause Logic | ⚠️ STALE | No explicit pause feature in codebase. Zombie guardrail handles idle sessions. No action needed. |
-| Bug 04 | Language Selection | ❌ DEFERRED | Requires full i18n system. Deferred to Phase 2. |
-| Bug 05 | Sporadic Progress Saving | ✅ FIXED | New `PendingSessionStore` service serialises failed `finishSession` payloads to SharedPreferences JSON. `AppShell._flushPendingSession()` retries on next launch, shows recovery SnackBar on success. |
-| Bug 06 | High Contrast Non-Functional | ✅ FIXED | `NeuroLoadApp` watches `settingsProvider` and calls `AppTheme.buildTheme(highContrast, fontFamily)`. Factory swaps colorScheme and elevates text colours globally. |
-| Bug 07 | About Section Links | ✅ FIXED | Added `url_launcher: ^6.3.0`. `_launchUrl()` helper opens Privacy Policy, ToS, and Impressum via `LaunchMode.externalApplication`. |
-| Bug 08 | Flip Calibration UX | 🔨 PARTIAL | 3-phase flow and haptic exist. Missing: live visual test confirmation. Queued next. |
-| Bug 09 | Lock Screen Widget | 🔨 PARTIAL (Android ✅) | Android: `AndroidNotificationAction('distracted')` in `showSessionActive`. `NotificationService.onNotificationDistraction` callback registered on session start/resume, cleared on finish/reset. iOS ActivityKit deferred (requires native Swift). |
-| Bug 10 | Auto-Distraction on Flip-Up | ✅ FIXED | `FaceDownNotifier._onEvent` calls `addLap(phone, 'auto: phone flipped up')` on face-up transition during `SessionPhase.active`. |
-| Bug 11 | Onboarding Flow-State Promise | ✅ FIXED | Added 4th `_PrivacyPoint` in `_FounderOathPage` with flow-state promise copy. |
+| Old Entry | Was Claimed | Reality |
+|-----------|-------------|---------|
+| Key Technical Gaps — "Heatmap is daily grid" | 🔴 HIGH gap | ✅ FIXED — `_CircularHeatmap` CustomPainter done as MVP.002.001 |
+| Key Technical Gaps — "Adaptive sensor polling not throttled" | 🟢 LOW gap | ✅ FIXED — US 7.3 implemented, 200ms/2000ms switching live |
+| Key Technical Gaps — "Paywall gate not wired to app startup" | 🔴 HIGH gap | ✅ FIXED — MVP.003.002 done, GoRouter redirect active |
+| EPIC 8 note — "Calibration missing sensor reads" | ❌ missing | ✅ FIXED — full live stream + 3-sample avg + SharedPrefs write implemented |
+| EPIC 8 note — "Baseline test should save to DB" | ❌ missing | ✅ FIXED — `insertSession` + `finishSession` called in `_BaselineTestPageState` |
 
 ---
 
-### 🎯 NEXT: Stripe Checkout (MVP.003.003)
+## ─────────────────────────────────────────────
+## SPRINT 4 — CURRENT DEVELOPMENT TARGET
+## Start here. Complete all P0 items before moving to P1.
+## ─────────────────────────────────────────────
 
-**Why next?** All bugs addressed. CI/CD pipelines are live. Stripe is the only remaining MVP blocker before public beta.
+**Goal:** Ship everything blocking a clean public beta build. No new features — only blockers and critical gaps.
 
-**What to build:**
-1. **MVP.003.003** — Stripe Checkout via Supabase Edge Function (see `runway/GUIDE.md` §9, STRIPE-001 through STRIPE-004).
-2. **Bug 08** — Live visual test phase in flip calibration (1 day).
+---
 
-**CI/CD is now live.** See `runway/GUIDE.md` for full setup instructions.
-- `.github/workflows/ci_android.yml` — analyze + test + APK + AAB on every push to main
-- `.github/workflows/ci_ios.yml` — analyze + test + unsigned IPA on every push to main
-- `android/app/build.gradle.kts` — reads `key.properties` for release signing
-- `runway/SECRETS_CHECKLIST.md` — one-time setup checklist for new environments
+### 🔴 S4-001 — Stripe Checkout (MVP.003.003)
+**Effort:** 8–10 days  **Blocks:** Revenue, public beta
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-001-A | Supabase Dashboard | Create Edge Function `create-checkout-session`: accept `user_id`, call Stripe API, return `{url}` |
+| S4-001-B | Supabase Dashboard | Create Edge Function `handle-stripe-webhook`: verify Stripe signature, set `has_paid = true` on `users` table |
+| S4-001-C | `lib/screens/paywall/paywall_screen.dart` | Wire "Buy Now" `onTap` → POST to `create-checkout-session` → `launchUrl(checkoutUrl)` |
+| S4-001-D | `lib/providers/subscription_provider.dart` | After `launchUrl`, poll `isPaidProvider` every 3s for up to 60s; on `true` → dismiss paywall |
+| S4-001-E | `runway/SECRETS_CHECKLIST.md` | Add `STRIPE_PUBLISHABLE_KEY` to GitHub Secrets; add `STRIPE_SECRET_KEY` to Supabase secrets only |
+
+**Acceptance criteria:** Tapping "Buy Now" opens Stripe Checkout in browser. Completing payment updates `isPaidProvider` to `true` and dismisses the paywall without requiring app restart.
+
+---
+
+### 🔴 S4-002 — Bug 08: Calibration Live Test Phase
+**Effort:** 1 day  **Blocks:** Correct onboarding UX for all users
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-002-A | `lib/screens/onboarding/onboarding_screen.dart` | Add `_CalibrationPhase.testing` to the enum (after `done`) |
+| S4-002-B | same | In `_finishCalibration()`, after saving baseline, set phase to `testing` instead of `done` |
+| S4-002-C | same | In `testing` phase: subscribe to accelerometer using saved `_zThreshold`. If `e.z <= _zThreshold` for 1500ms → haptic + set phase to `done` + call `onCalibrated()` |
+| S4-002-D | same | `_buildVisual()` testing branch: show "Now flip it face-down to confirm" text + pulsing phone icon |
+| S4-002-E | same | Add "Skip test" link in testing phase (same as existing skip link) |
+
+**Acceptance criteria:** After baseline sampling, user sees a prompt to flip phone face-down. Holding it down for 1.5s produces green checkmark + haptic and unlocks Continue. Skip link always available.
+
+---
+
+### 🔴 S4-003 — GAP-001: Persist settingsProvider to SharedPreferences
+**Effort:** 1 day  **Blocks:** High contrast + font preferences lost on restart
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-003-A | `lib/providers/session_provider.dart` → `SettingsNotifier` | On construction, load `highContrast`, `localOnlyNotes`, `cloudSyncEnabled`, `fontFamily` from `SharedPreferences` |
+| S4-003-B | same | In every `toggle*` and `setFont()` method, write updated value back to `SharedPreferences` after updating state |
+| S4-003-C | same | Keys: `settings_high_contrast` (bool), `settings_local_only_notes` (bool), `settings_cloud_sync` (bool), `settings_font_family` (String) |
+
+**Acceptance criteria:** Toggle high contrast → kill app → reopen → high contrast still active.
+
+---
+
+### 🔴 S4-004 — GAP-002: Font Picker UI
+**Effort:** 0.5 days  **Blocks:** Bug 06 full resolution
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-004-A | `lib/screens/settings/settings_screen.dart` | Replace `onTap: () {}` on Font tile with `_showFontPicker(context)` |
+| S4-004-B | same | `_showFontPicker()` → `showModalBottomSheet` with 3 options: `Inter` (default), `Georgia` (serif), `Courier` (monospace) |
+| S4-004-C | same | Each option: `ListTile` with font name rendered in that font + checkmark if selected |
+| S4-004-D | same | On selection: `ref.read(settingsProvider.notifier).setFont(family)` — theme rebuilds automatically |
+
+**Acceptance criteria:** Tapping Font tile shows picker. Selecting a font immediately updates all body text across the app. Selection survives restart (depends on S4-003).
+
+---
+
+### 🔴 S4-005 — GAP-003: `/timer` Route Guard
+**Effort:** 0.5 days  **Blocks:** Crash/blank screen for direct navigation
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-005-A | `lib/router.dart` | In the `/timer` route `redirect` callback: if `sessionProvider.phase != SessionPhase.active` → redirect to `/setup` |
+| S4-005-B | same | Same guard for `/summary` — if `phase != SessionPhase.complete` → redirect to `/setup` |
+
+**Acceptance criteria:** Opening `/timer` URL with no active session redirects cleanly to `/setup`. No blank screen.
+
+---
+
+### 🟡 S4-006 — GAP-004: Break Notifications (US 2.3)
+**Effort:** 1 day
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-006-A | `lib/screens/break/break_timer_screen.dart` | When `_remaining == 60` inside the countdown ticker, call `NotificationService.showRestComplete()` with a "1 minute left" title |
+| S4-006-B | same | When `_remaining == 0`, call `NotificationService.showRestComplete()` with "Break over — time to train" title |
+| S4-006-C | `lib/services/notification_service.dart` | Update `showRestComplete()` to accept a `title` and `body` parameter instead of hardcoded strings |
+
+**Acceptance criteria:** Phone locked during break: at T-60s a notification appears "1 minute left"; at T-0 "Break over — time to train" appears.
+
+---
+
+### 🟡 S4-007 — GAP-005: "One More Rep" Nudge (US 2.4)
+**Effort:** 0.5 days
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-007-A | `lib/screens/timer/timer_screen.dart` `_finishSession()` | Before calling `finishSession()`, fetch `allTimeOneRmProvider` |
+| S4-007-B | same | Compute `currentLapDuration` = elapsed since last lap (or session start if 0 laps) |
+| S4-007-C | same | If `currentLapDuration >= allTimeOneRm * 0.9` (within 10%): show `AlertDialog` "You are X min from your PB. Keep going?" with "Keep Going" / "End Anyway" actions |
+| S4-007-D | same | "Keep Going" pops the dialog only; "End Anyway" proceeds with `finishSession()` |
+
+**Acceptance criteria:** Finishing a session while within 10% of all-time 1RM triggers the nudge dialog. Dismissing it resumes the timer. Confirming ends the session normally.
+
+---
+
+### 🟡 S4-008 — GAP-006: Ghost Intent Flash (US 4.8)
+**Effort:** 0.5 days
+
+| Task | File | Detail |
+|------|------|--------|
+| S4-008-A | `lib/screens/timer/widgets/distraction_modal.dart` | In the 5s auto-dismiss `Future.delayed`, change to: at 3.5s set state `_showingIntent = true` (shows intent text), then at 5s pop |
+| S4-008-B | same | Add `_showingIntent` bool to modal state. When true, replace icon grid with centered intent text (italic, teal, fade-in `AnimatedOpacity`) |
+| S4-008-C | same | Intent is already passed in as `widget.intent` — no provider read needed |
+
+**Acceptance criteria:** Tapping Distracted and doing nothing → at 3.5s the 6 icons fade out and the session intent text appears for 1.5s → modal closes and `Involuntary` lap is logged.
+
+---
+
+## ─────────────────────────────────────────────
+## SPRINT 5 — QUEUED (start after Sprint 4 ships)
+## ─────────────────────────────────────────────
+
+| ID | Item | Effort | File |
+|----|------|--------|------|
+| S5-001 | US 1.2 Sub-category auto-suggest | 1 day | `setup_screen.dart` + `SessionDao.topSubCategories(category, limit: 5)` |
+| S5-002 | US 1.3 Baseline aim +5% nudge display | 1 day | `setup_screen.dart` reads `nextAimProvider`, pre-fills target |
+| S5-003 | US 3.4 Resilience KPI tracking | 1 day | Add `modalOpenedAt` timestamp to Lap, compute delta on dismiss, new `avgResilienceProvider` + KPI card |
+| S5-004 | US 4.4 + US 4.5 Contextual Leak + Mitigation text | 1 day | `coach_engine.dart` — cross-category 1RM delta; static mitigation map |
+| S5-005 | US 3.2 Distraction Danger Zones on heatmap | 2 days | `dashboard_screen.dart` — second ring or overlay on `_CircularHeatmap` for lap density |
+| S5-006 | Bug 04 / Bug 07: Full i18n system | 3 days | `pubspec.yaml` + `lib/l10n/` ARB files + `LanguageSelectionPage` in onboarding |
+| S5-007 | Bug 09 iOS: ActivityKit Live Activities | 5 days | Native Swift widget + Flutter method channel (requires Mac + Apple Developer account) |
+
+---
+
+## ─────────────────────────────────────────────
+## CI/CD STATUS
+## ─────────────────────────────────────────────
+
+Live as of 2026-03-05. See `runway/GUIDE.md` for full setup.
+
+| File | Runner | What it does |
+|------|--------|--------------|
+| `.github/workflows/ci_android.yml` | ubuntu-latest | analyze + test on every PR; APK + AAB on push to main |
+| `.github/workflows/ci_ios.yml` | macos-latest | analyze + test on every PR; unsigned IPA on push to main |
+| `android/app/build.gradle.kts` | — | Reads `android/key.properties` for release signing; falls back to debug if absent |
+
+**One-time setup required:** Add 4 Android secrets to GitHub → `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`. See `runway/SECRETS_CHECKLIST.md`.

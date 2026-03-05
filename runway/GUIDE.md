@@ -351,33 +351,32 @@ When Stripe is integrated, add to GitHub Secrets:
 
 ## 9. Implementation Backlog
 
-Ordered by priority. Pick from the top. Update status when done.
+Full detail in `planning/IMPLEMENTATION_LOG.md` Sprint 4 + Sprint 5 sections. Summary here.
 
-### 🔴 P0 — Must ship before public beta
+### 🔴 Sprint 4 — Beta blockers (do these first)
 
-| ID | Task | File(s) | Effort | Status |
-|----|------|---------|--------|--------|
-| STRIPE-001 | Create Supabase Edge Function `create-checkout-session` (calls Stripe API, returns URL) | Supabase dashboard + new Edge Function | 3 days | ❌ Not started |
-| STRIPE-002 | Create Supabase Edge Function `handle-stripe-webhook` (verifies signature, sets `has_paid = true`) | Supabase dashboard | 2 days | ❌ Not started |
-| STRIPE-003 | Wire "Buy Now" button in `paywall_screen.dart` to open Stripe checkout URL via `url_launcher` | `lib/screens/paywall/paywall_screen.dart` | 1 day | ❌ Not started |
-| STRIPE-004 | After webhook fires, poll `isPaidProvider` and dismiss paywall | `lib/providers/subscription_provider.dart` | 1 day | ❌ Not started |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| S4-001 | Stripe Checkout end-to-end (Edge Functions + paywall wire-up) | 8–10 days | ❌ Not started |
+| S4-002 | Bug 08: Calibration live test phase (flip-to-confirm) | 1 day | 🔨 Partial |
+| S4-003 | Persist `settingsProvider` to SharedPreferences | 1 day | ❌ Not started |
+| S4-004 | Font picker UI in Settings | 0.5 days | ❌ Not started |
+| S4-005 | `/timer` + `/summary` route guards | 0.5 days | ❌ Not started |
+| S4-006 | Break notifications T-60s + T-0 (US 2.3) | 1 day | ❌ Not started |
+| S4-007 | "One More Rep" nudge on finish (US 2.4) | 0.5 days | ❌ Not started |
+| S4-008 | Ghost Intent flash before modal dismiss (US 4.8) | 0.5 days | ❌ Not started |
 
-### 🟡 P1 — Quality & UX improvements
+### 🟢 Sprint 5 — Post-beta polish
 
-| ID | Task | File(s) | Effort | Status |
-|----|------|---------|--------|--------|
-| BUG-008 | Flip calibration: add live visual test phase. Show animated phone graphic that goes green when face-down threshold is met. Gate "Continue" button on successful test. | `lib/screens/onboarding/onboarding_screen.dart` → `_SensorCalibrationPage` | 1 day | 🔨 Partial |
-| US-7.4 | iOS Live Activities: timer on lock screen (requires native Swift ActivityKit widget). Deferred — see `docs/PHASE_2_GUIDE.md`. | Native Swift + Flutter method channel | 5 days | ❌ Deferred |
-| PERF-001 | Enable `isMinifyEnabled = true` in `build.gradle.kts` release config + add ProGuard rules for Drift + Riverpod. | `android/app/build.gradle.kts` + new `android/app/proguard-rules.pro` | 1 day | ❌ Not started |
-
-### 🟢 P2 — Phase 2 features (post-launch)
-
-| ID | Task | File(s) | Effort | Status |
-|----|------|---------|--------|--------|
-| PHASE2-001 | Cloud Sync: Supabase tables `sessions` + `laps`, RLS policies, upsert logic | `lib/services/supabase_sync_service.dart` | 3 days | ❌ Not started |
-| PHASE2-002 | i18n: add `flutter_localizations` + ARB files for EN/TR/DE | `lib/l10n/`, `pubspec.yaml` | 3 days | ❌ Not started |
-| PHASE2-003 | Daily reminder notification: settings tile to pick time + `NotificationService.scheduleDailyReminder()` UI wire-up | `lib/screens/settings/settings_screen.dart` | 1 day | ❌ Not started |
-| PHASE2-004 | ProGuard / R8 hardening for release builds | `android/app/proguard-rules.pro` | 1 day | ❌ Not started |
+| ID | Task | Effort |
+|----|------|--------|
+| S5-001 | Sub-category auto-suggest from DB history (US 1.2) | 1 day |
+| S5-002 | Baseline aim +5% nudge display on setup screen (US 1.3) | 1 day |
+| S5-003 | Resilience KPI tracking + card (US 3.4) | 1 day |
+| S5-004 | Contextual Leak + Strategy Recommendations in CoachEngine (US 4.4/4.5) | 1 day |
+| S5-005 | Distraction Danger Zones on heatmap (US 3.2) | 2 days |
+| S5-006 | Full i18n system (Bug 04 / Bug 07 locale URLs) | 3 days |
+| S5-007 | iOS ActivityKit Live Activities (Bug 09 iOS) | 5 days |
 
 ---
 
