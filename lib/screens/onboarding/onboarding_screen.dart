@@ -1086,21 +1086,21 @@ class _FounderOathPage extends StatelessWidget {
           const SizedBox(height: 4),
           Container(width: 40, height: 2, color: AppColors.teal),
           const SizedBox(height: 24),
-          _PrivacyPoint(
+          const _PrivacyPoint(
             icon: Icons.lock_outline,
             title: 'Local-First, Always',
             body: 'Every session, every lap, every note is stored encrypted '
                 'on your device. We never see it. Ever.',
           ),
           const SizedBox(height: 16),
-          _PrivacyPoint(
+          const _PrivacyPoint(
             icon: Icons.cloud_off_outlined,
             title: 'Cloud is Optional',
             body: 'Multi-device sync is a paid, opt-in feature. '
                 'The default is air-gapped privacy.',
           ),
           const SizedBox(height: 16),
-          _PrivacyPoint(
+          const _PrivacyPoint(
             icon: Icons.delete_forever_outlined,
             title: 'Right to Erasure',
             body: 'A single button wipes everything — local and cloud — '

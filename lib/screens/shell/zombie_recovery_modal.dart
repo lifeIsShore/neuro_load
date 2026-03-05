@@ -48,8 +48,9 @@ class _ZombieRecoveryModalState extends State<ZombieRecoveryModal>
   }
 
   String _formatDuration(Duration d) {
-    if (d.inHours >= 1)
+    if (d.inHours >= 1) {
       return '${d.inHours}h ${d.inMinutes.remainder(60)}m ago';
+    }
     if (d.inMinutes >= 1) return '${d.inMinutes}m ago';
     return 'just now';
   }

@@ -119,7 +119,7 @@ class _DistractionModalState extends State<DistractionModal> {
             // Countdown bar
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 1.0, end: 0.0),
-              duration: Duration(seconds: _autoDismissDuration),
+              duration: const Duration(seconds: _autoDismissDuration),
               builder: (context, value, _) => LinearProgressIndicator(
                 value: value,
                 backgroundColor: AppColors.surfaceElevated,

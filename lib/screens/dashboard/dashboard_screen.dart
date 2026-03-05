@@ -141,7 +141,7 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // ── Heatmap ────────────────────────────────────────────────────
-              _SectionHeader('24-HOUR FOCUS RING · ALL TIME'),
+              const _SectionHeader('24-HOUR FOCUS RING · ALL TIME'),
               const SizedBox(height: 12),
               sessionsAsync.when(
                 data: (sessions) => _CircularHeatmap(sessions: sessions),
@@ -152,7 +152,7 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // ── Distraction Doughnut ───────────────────────────────────────
-              _SectionHeader('DISTRACTION BREAKDOWN'),
+              const _SectionHeader('DISTRACTION BREAKDOWN'),
               const SizedBox(height: 12),
               ref.watch(triggerCountMapProvider).when(
                     data: (map) => map.isEmpty
@@ -167,16 +167,17 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // ── 1RM Trend ──────────────────────────────────────────────────
-              _SectionHeader('1RM PROGRESSION'),
+              const _SectionHeader('1RM PROGRESSION'),
               const SizedBox(height: 12),
               sessionsAsync.when(
                 data: (sessions) {
                   final completed =
                       sessions.where((s) => s.sessionOneRmSeconds > 0).toList();
-                  if (completed.isEmpty)
+                  if (completed.isEmpty) {
                     return const _ChartSkeleton(
                         height: 140,
                         label: 'Complete sessions to see your 1RM trend');
+                  }
                   return _OneRMLineChart(sessions: completed);
                 },
                 loading: () => const _ChartSkeleton(height: 140),
@@ -451,7 +452,7 @@ class _ClockRingPainter extends CustomPainter {
           maxMins > 0 ? (hourMinutes[h] / maxMins).clamp(0.0, 1.0) : 0.0;
 
       final startAngle = startOffset + h * sweepPerHour + gapRad / 2;
-      final sweep = sweepPerHour - gapRad;
+      const sweep = sweepPerHour - gapRad;
 
       // Arc thickness grows with intensity
       final thickness = bandMin + (bandMax - bandMin) * intensity;

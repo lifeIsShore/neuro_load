@@ -84,7 +84,7 @@ class NotificationService {
       1,
       'NeuroLoad — In Flow',
       '$category · $mins:$secs',
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           'focus_session',
           'Focus Session',

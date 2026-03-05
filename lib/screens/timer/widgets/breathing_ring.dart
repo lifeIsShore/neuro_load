@@ -95,7 +95,7 @@ class _RingPainter extends CustomPainter {
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
-    final sweepAngle = math.pi * 0.4;
+    const sweepAngle = math.pi * 0.4;
     final startAngle = -math.pi / 2 + (progress * 2 * math.pi);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius - 2),

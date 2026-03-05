@@ -75,7 +75,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 32),
 
               // ── Licence ──────────────────────────────────────────────────
-              _SettingsSection(title: 'LICENCE'),
+              const _SettingsSection(title: 'LICENCE'),
               Builder(builder: (ctx) {
                 final isPaid = ref.watch(isPaidProvider);
                 return Column(
@@ -106,7 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 24),
 
               // ── Privacy & Data ────────────────────────────────────────────
-              _SettingsSection(title: 'PRIVACY & DATA'),
+              const _SettingsSection(title: 'PRIVACY & DATA'),
 
               // Cloud Sync toggle
               _SettingsToggle(
@@ -186,7 +186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 24),
 
               // ── Accessibility ─────────────────────────────────────────────
-              _SettingsSection(title: 'ACCESSIBILITY'),
+              const _SettingsSection(title: 'ACCESSIBILITY'),
               _SettingsToggle(
                 icon: Icons.contrast_outlined,
                 label: 'High-Contrast Mode',
@@ -207,7 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 24),
 
               // ── About ─────────────────────────────────────────────────────
-              _SettingsSection(title: 'ABOUT'),
+              const _SettingsSection(title: 'ABOUT'),
               _SettingsTile(
                 icon: Icons.policy_outlined,
                 label: 'Privacy Policy',
@@ -233,7 +233,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 32),
 
               // ── DANGER ZONE ───────────────────────────────────────────────
-              _SettingsSection(
+              const _SettingsSection(
                   title: 'DANGER ZONE', labelColor: AppColors.danger),
               Container(
                 decoration: BoxDecoration(
@@ -646,7 +646,7 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.teal,
+            activeThumbColor: AppColors.teal,
           ),
         ],
       ),

@@ -119,7 +119,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
                 const SizedBox(height: 40),
 
                 // ── Primary Category ─────────────────────────────────────────
-                _SectionLabel(label: 'SELECT CATEGORY'),
+                const _SectionLabel(label: 'SELECT CATEGORY'),
                 const SizedBox(height: 12),
                 _CategorySelector(
                   selected: session.category,
@@ -132,7 +132,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
                 const SizedBox(height: 32),
 
                 // ── Sub-Category ─────────────────────────────────────────────
-                _SectionLabel(label: 'WHAT SPECIFICALLY?'),
+                const _SectionLabel(label: 'WHAT SPECIFICALLY?'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _subCatController,
@@ -168,7 +168,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
                 const SizedBox(height: 32),
 
                 // ── Baseline Aim ─────────────────────────────────────────────
-                _SectionLabel(label: 'BASELINE AIM'),
+                const _SectionLabel(label: 'BASELINE AIM'),
                 const SizedBox(height: 12),
                 _BaselineAimSelector(
                   onSelected: (d) =>
@@ -179,7 +179,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
                 const SizedBox(height: 32),
 
                 // ── Intent Statement ─────────────────────────────────────────
-                _SectionLabel(label: 'PRE-FLOW INTENT'),
+                const _SectionLabel(label: 'PRE-FLOW INTENT'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _intentController,
@@ -203,9 +203,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
                     height: 60,
                     child: ElevatedButton(
                       onPressed: canStart ? _startSession : null,
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Icon(Icons.play_arrow_rounded, size: 22),
                           SizedBox(width: 8),
                           Text('START SESSION'),

@@ -71,8 +71,8 @@ class _BreakTimerScreenState extends State<BreakTimerScreen>
     final isDone = _secondsRemaining == 0;
 
     // Rest Mode color palette (cool, calm blues/purples)
-    final restBaseColor = const Color(0xFF4A6572);
-    final restAccentColor = const Color(0xFF8B9DC3);
+    const restBaseColor = Color(0xFF4A6572);
+    const restAccentColor = Color(0xFF8B9DC3);
 
     return Scaffold(
       backgroundColor: AppColors.background,
