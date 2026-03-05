@@ -57,7 +57,9 @@ android {
                 // Local dev without a keystore: fall back to debug signing.
                 signingConfigs.getByName("debug")
             }
-            isMinifyEnabled = false  // enable + add ProGuard rules when ready
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
