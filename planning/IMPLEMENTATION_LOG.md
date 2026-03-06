@@ -283,10 +283,50 @@ Full checklist: `planning/S4-001-STRIPE-SETUP.md`
 **Current Capabilities:**
 - [x] **Manual Trigger**: Workflow can be started via GitHub Actions UI.
 - [x] **Debug APK**: On-demand artifact available for instant device testing (no signing required).
+- [x] **Release APK (debug-signed)**: Fully optimized (minified + obfuscated + resource-shrunk) but signed with the Android debug key. Installs on any real device via ADB or direct APK download from GitHub Actions artifacts. Sufficient for all pre-launch testing.
 - [x] **Build Fixes applied**: Refactored 57 deprecated `withOpacity` calls to `withValues` (Flutter 3.41+ compatibility); `prefer_const_constructors` fixed; missing asset directories secured via `.gitkeep`. Build is now green (`No issues found!`).
-- [ ] **Production Secrets**: Needs 4 GitHub secrets for Release builds (`KEYSTORE_BASE64`, etc.).
+- [ ] **Release AAB (Play Store)**: Disabled — no Play Store account yet. See below for re-enabling steps.
+- [ ] **Production Keystore**: Not yet created.
 
 **Guide Created:** `brain/ci_cd_guide.md`
+
+### 🔐 When Ready for Play Store — Re-enable Release Signing
+
+**Step 1 — Create a keystore (run once on your machine, keep the file forever):**
+```powershell
+keytool -genkeypair -alias neuroload -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore neuro_load_release.jks -validity 10000
+```
+> ⚠️ Store `neuro_load_release.jks` somewhere safe and permanent (e.g. password manager, external drive). Losing it means you can NEVER update the app on the Play Store.
+
+**Step 2 — Encode it for GitHub (PowerShell):**
+```powershell
+$bytes = [IO.File]::ReadAllBytes("neuro_load_release.jks")
+[Convert]::ToBase64String($bytes) | Set-Clipboard
+```
+
+**Step 3 — Add 4 GitHub Secrets** at `Settings → Secrets and variables → Actions`:
+| Secret | Value |
+|--------|-------|
+| `KEYSTORE_BASE64` | Output of Step 2 (from clipboard) |
+| `KEY_ALIAS` | `neuroload` |
+| `KEY_PASSWORD` | Password you set in Step 1 |
+| `STORE_PASSWORD` | Same password |
+
+**Step 4 — Update `android/app/build.gradle.kts`** — restore the signing config:
+```kotlin
+// In signingConfigs block:
+create("release") {
+    keyAlias      = keyProperties["keyAlias"]     as String? ?: ""
+    keyPassword   = keyProperties["keyPassword"]  as String? ?: ""
+    storeFile     = file(keyProperties["storeFile"] as String? ?: "release.jks")
+    storePassword = keyProperties["storePassword"] as String? ?: ""
+    storeType     = keyProperties["storeType"]    as String? ?: "PKCS12"
+}
+// In buildTypes.release block:
+signingConfig = signingConfigs.getByName("release")
+```
+
+**Step 5 — Uncomment the `build_aab` job** in `.github/workflows/ci_android.yml`.
 
 ### 🛠️ Developer Audit Notes (2026-03-05)
 Recent CI failures and deployment issues were caused by the attempt to use preview Flutter 3.41 APIs (`withValues`) which are not yet stable/supported in the current build environment. The following reversions were applied to secure the build:
