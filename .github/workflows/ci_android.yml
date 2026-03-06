@@ -108,6 +108,8 @@ jobs:
           EOF
 
       - name: Build release APK
+        env:
+          JAVA_TOOL_OPTIONS: "-Dkeystore.pkcs12.legacy"
         run: flutter build apk --release --obfuscate --split-debug-info=build/symbols
 
       - name: Upload APK artifact
@@ -192,6 +194,8 @@ jobs:
           EOF
 
       - name: Build release AAB
+        env:
+          JAVA_TOOL_OPTIONS: "-Dkeystore.pkcs12.legacy"
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 
       - name: Upload AAB artifact
