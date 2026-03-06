@@ -34,10 +34,13 @@ android {
         create("release") {
             // Values come from key.properties (CI-injected or local file).
             // Falls back to empty strings so a missing file doesn't crash debug builds.
-            keyAlias     = keyProperties["keyAlias"]     as String? ?: ""
-            keyPassword  = keyProperties["keyPassword"]  as String? ?: ""
-            storeFile    = file(keyProperties["storeFile"] as String? ?: "release.jks")
+            keyAlias      = keyProperties["keyAlias"]     as String? ?: ""
+            keyPassword   = keyProperties["keyPassword"]  as String? ?: ""
+            storeFile     = file(keyProperties["storeFile"] as String? ?: "release.jks")
             storePassword = keyProperties["storePassword"] as String? ?: ""
+            // Explicitly declare PKCS12 so AGP 8+ doesn't try to parse as legacy JKS
+            // (omitting this causes "Tag number over 30 is not supported" on modern keystores)
+            storeType     = keyProperties["storeType"]    as String? ?: "PKCS12"
         }
     }
 
