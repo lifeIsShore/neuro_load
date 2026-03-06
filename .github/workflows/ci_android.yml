@@ -94,9 +94,22 @@ jobs:
       - name: Run code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Decode keystore
+      - name: Decode and convert keystore to JKS format
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+          # Decode the base64 keystore (may be PKCS12 or JKS)
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release_input.jks
+          # Convert to legacy JKS format that apksigner/bundletool can read
+          keytool -importkeystore \
+            -srckeystore android/app/release_input.jks \
+            -srcstoretype PKCS12 \
+            -srcstorepass "${{ secrets.STORE_PASSWORD }}" \
+            -destkeystore android/app/release.jks \
+            -deststoretype JKS \
+            -deststorepass "${{ secrets.STORE_PASSWORD }}" \
+            -noprompt 2>/dev/null || \
+          # If it's already JKS (not PKCS12), just use it as-is
+          cp android/app/release_input.jks android/app/release.jks
+          rm -f android/app/release_input.jks
 
       - name: Write key.properties
         run: |
@@ -108,8 +121,6 @@ jobs:
           EOF
 
       - name: Build release APK
-        env:
-          JAVA_TOOL_OPTIONS: "-Dkeystore.pkcs12.legacy"
         run: flutter build apk --release --obfuscate --split-debug-info=build/symbols
 
       - name: Upload APK artifact
@@ -180,9 +191,22 @@ jobs:
       - name: Run code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Decode keystore
+      - name: Decode and convert keystore to JKS format
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+          # Decode the base64 keystore (may be PKCS12 or JKS)
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release_input.jks
+          # Convert to legacy JKS format that apksigner/bundletool can read
+          keytool -importkeystore \
+            -srckeystore android/app/release_input.jks \
+            -srcstoretype PKCS12 \
+            -srcstorepass "${{ secrets.STORE_PASSWORD }}" \
+            -destkeystore android/app/release.jks \
+            -deststoretype JKS \
+            -deststorepass "${{ secrets.STORE_PASSWORD }}" \
+            -noprompt 2>/dev/null || \
+          # If it's already JKS (not PKCS12), just use it as-is
+          cp android/app/release_input.jks android/app/release.jks
+          rm -f android/app/release_input.jks
 
       - name: Write key.properties
         run: |
@@ -194,8 +218,6 @@ jobs:
           EOF
 
       - name: Build release AAB
-        env:
-          JAVA_TOOL_OPTIONS: "-Dkeystore.pkcs12.legacy"
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 
       - name: Upload AAB artifact
