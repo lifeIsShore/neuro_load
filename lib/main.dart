@@ -40,7 +40,9 @@ class NeuroLoadApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'NeuroLoad',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.buildTheme(
+      // Feature 02: pass themeVariant so all 5 themes update live
+      theme: AppTheme.forVariant(
+        settings.themeVariant,
         highContrast: settings.highContrast,
         fontFamily: settings.fontFamily,
       ),

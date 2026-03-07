@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import '../theme/app_theme.dart' show AppThemeVariant;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,7 @@ import '../data/app_database.dart';
 import '../data/database_providers.dart';
 import '../services/foreground_service.dart';
 import '../services/notification_service.dart';
+import '../services/live_activity_service.dart'; // Feature 01
 import '../services/pending_session_store.dart';
 import 'sensor_provider.dart' show ZombieSession;
 import 'subscription_provider.dart';
@@ -233,10 +235,10 @@ class SessionNotifier extends StateNotifier<SessionState> {
       elapsed: Duration.zero,
     );
 
-    // Bug 09: register the distraction callback so the Android notification
-    // action button can log a lap without needing a BuildContext.
+    // Bug 09 / Feature 01: register the distraction callback so the Android
+    // notification action button can log a lap without a BuildContext.
     NotificationService.onNotificationDistraction = () {
-      addLap(trigger: DistractionTrigger.phone, note: 'via notification');
+      addLap(trigger: DistractionTrigger.phone, note: 'via lock screen');
     };
 
     // Persist start to DB
@@ -255,6 +257,13 @@ class SessionNotifier extends StateNotifier<SessionState> {
       // DB errors must never block the session
       debugPrint('DB insertSession error: $e');
     }
+
+    // Feature 01: start iOS Live Activity (no-op on Android)
+    LiveActivityService.start(
+      sessionId: state.dbSessionId?.toString() ?? 'session',
+      category: state.category?.label ?? 'Focus',
+      subCategory: state.subCategory ?? '',
+    );
   }
 
   /// Tick counter — used to throttle notification updates and auto-saves.
@@ -271,10 +280,16 @@ class SessionNotifier extends StateNotifier<SessionState> {
       _tickCount++;
 
       // Update the persistent notification every 60 seconds to save battery.
+      // Feature 01: also update the iOS Live Activity at the same cadence.
       if (_tickCount % 60 == 0) {
         NotificationService.showSessionActive(
           category: state.category?.label ?? 'Focus',
           elapsed: state.elapsed,
+          subCategory: state.subCategory ?? '',
+        );
+        LiveActivityService.update(
+          elapsedSeconds: state.elapsed.inSeconds,
+          lapCount: state.laps.length,
         );
       }
 
@@ -350,6 +365,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
     ForegroundService.stop();
     await NotificationService.dismissSessionNotification();
     NotificationService.onNotificationDistraction = null; // Bug 09: unregister
+    await LiveActivityService.end(); // Feature 01: end iOS Live Activity
     _tickCount = 0;
 
     // Persist finish + laps to DB
@@ -419,6 +435,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
     ForegroundService.stop();
     NotificationService.dismissSessionNotification();
     NotificationService.onNotificationDistraction = null; // Bug 09: unregister
+    LiveActivityService.end(); // Feature 01
     _tickCount = 0;
     state = const SessionState();
   }
@@ -441,6 +458,8 @@ class AppSettings {
   final String fontFamily;
   // Bug 15: user-controlled toggle for flip-to-start / flip-distraction
   final bool flipToStartEnabled;
+  // Feature 02: selected colour theme
+  final AppThemeVariant themeVariant;
 
   const AppSettings({
     this.highContrast = false,
@@ -448,6 +467,7 @@ class AppSettings {
     this.cloudSyncEnabled = false,
     this.fontFamily = 'Inter',
     this.flipToStartEnabled = true,
+    this.themeVariant = AppThemeVariant.obsidianNoir,
   });
 
   AppSettings copyWith({
@@ -456,6 +476,7 @@ class AppSettings {
     bool? cloudSyncEnabled,
     String? fontFamily,
     bool? flipToStartEnabled,
+    AppThemeVariant? themeVariant,
   }) {
     return AppSettings(
       highContrast: highContrast ?? this.highContrast,
@@ -463,6 +484,7 @@ class AppSettings {
       cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
       fontFamily: fontFamily ?? this.fontFamily,
       flipToStartEnabled: flipToStartEnabled ?? this.flipToStartEnabled,
+      themeVariant: themeVariant ?? this.themeVariant,
     );
   }
 }
@@ -478,15 +500,25 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const _kCloudSync         = 'settings_cloud_sync';
   static const _kFontFamily        = 'settings_font_family';
   static const _kFlipToStart       = 'session_flip_to_start'; // Bug 15
+  static const _kThemeVariant      = 'settings_theme_variant'; // Feature 02
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    // Feature 02: restore theme variant by name
+    final savedTheme = prefs.getString(_kThemeVariant);
+    final themeVariant = savedTheme != null
+        ? AppThemeVariant.values.firstWhere(
+            (v) => v.name == savedTheme,
+            orElse: () => AppThemeVariant.obsidianNoir,
+          )
+        : AppThemeVariant.obsidianNoir;
     state = AppSettings(
       highContrast:      prefs.getBool(_kHighContrast)    ?? false,
       localOnlyNotes:    prefs.getBool(_kLocalOnlyNotes)  ?? true,
       cloudSyncEnabled:  prefs.getBool(_kCloudSync)       ?? false,
       fontFamily:        prefs.getString(_kFontFamily)    ?? 'Inter',
       flipToStartEnabled: prefs.getBool(_kFlipToStart)    ?? true,
+      themeVariant:      themeVariant,
     );
   }
 
@@ -523,6 +555,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(flipToStartEnabled: next);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kFlipToStart, next);
+  }
+
+  // Feature 02: set colour theme
+  Future<void> setTheme(AppThemeVariant variant) async {
+    state = state.copyWith(themeVariant: variant);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kThemeVariant, variant.name);
   }
 }
 

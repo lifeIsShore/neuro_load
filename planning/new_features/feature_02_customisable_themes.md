@@ -1,6 +1,6 @@
 # FEATURE-02 — Customisable Themes: Light & Colour Palette System
 
-**Status:** Proposed  
+**Status:** Implemented  
 **Priority:** Medium  
 **Reported:** 2026-03-07  
 **Type:** New Feature  

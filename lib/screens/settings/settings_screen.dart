@@ -56,7 +56,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isConfigured = _projectUrl.isNotEmpty && _anonKey.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      // Feature 02: use theme scaffold colour so light themes render correctly
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
@@ -207,6 +207,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: const Icon(Icons.chevron_right,
                     color: AppColors.textTertiary),
                 onTap: () => context.push('/calibration'),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Appearance (Feature 02) ───────────────────────────────────
+              const _SettingsSection(title: 'APPEARANCE'),
+              _ThemePicker(
+                current: settings.themeVariant,
+                onSelect: (v) =>
+                    ref.read(settingsProvider.notifier).setTheme(v),
               ),
 
               const SizedBox(height: 24),
@@ -781,6 +791,125 @@ class _SettingsTile extends StatelessWidget {
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       minLeadingWidth: 28,
+    );
+  }
+}
+
+// ── Feature 02: Theme Picker ─────────────────────────────────────────────────
+
+/// Horizontal scrollable row of theme chips.  Each chip shows a tiny
+/// colour preview (background + accent dot) and the theme name below.
+/// Tapping a chip applies the theme immediately via [onSelect].
+class _ThemePicker extends StatelessWidget {
+  final AppThemeVariant current;
+  final ValueChanged<AppThemeVariant> onSelect;
+
+  const _ThemePicker({required this.current, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 88,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        children: AppThemeVariant.values.map((v) {
+          final palette = ThemePalette.forVariant(v);
+          final isSelected = v == current;
+          return GestureDetector(
+            onTap: () => onSelect(v),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 12),
+              width: 64,
+              decoration: BoxDecoration(
+                color: palette.background,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected
+                      ? palette.accent
+                      : palette.border.withOpacity(0.6),
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: palette.accent.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Colour preview square
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: palette.surfaceElevated,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: palette.border.withOpacity(0.4),
+                            width: 0.5,
+                          ),
+                        ),
+                      ),
+                      // Accent dot
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: palette.accent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      // Check mark overlay when selected
+                      if (isSelected)
+                        Positioned(
+                          top: 2,
+                          right: 2,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: palette.accent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              size: 8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    v.label,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: isSelected
+                              ? palette.accent
+                              : AppColors.textTertiary,
+                          fontSize: 9,
+                          letterSpacing: 0.3,
+                        ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

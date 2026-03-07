@@ -3,7 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'providers/session_provider.dart';
+import 'providers/session_provider.dart'
+    show
+        sessionProvider,
+        SessionPhase,
+        DistractionTrigger;
 import 'providers/subscription_provider.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/calibration/calibration_screen.dart';
@@ -77,6 +81,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/calibration',
         builder: (context, state) => const CalibrationScreen(),
+      ),
+      // Feature 01: deeplink fired when user taps "Distracted" on the iOS
+      // Live Activity or the Android notification action.
+      // Logs a phone distraction silently and returns to the timer (or
+      // stays wherever the user is if the session is no longer active).
+      GoRoute(
+        path: '/distracted',
+        redirect: (context, routeState) {
+          final container = ProviderScope.containerOf(context);
+          final session = container.read(sessionProvider);
+          if (session.phase == SessionPhase.active) {
+            container
+                .read(sessionProvider.notifier)
+                .addLap(
+                  trigger: DistractionTrigger.phone,
+                  note: 'via lock screen',
+                );
+            return '/timer';
+          }
+          return '/setup';
+        },
       ),
       GoRoute(
         path: '/break',

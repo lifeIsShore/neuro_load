@@ -104,19 +104,35 @@ class NotificationService {
     cancelNotification: false,
   );
 
-  /// Shows a persistent "session in progress" notification on Android,
-  /// with an "I Got Distracted" action button (Bug 09).
+  /// Shows a persistent "session in progress" notification on Android.
+  ///
+  /// Feature 01:
+  /// • [visibility] is set to [NotificationVisibility.public] so the full
+  ///   content (timer + category) is shown on the lock screen without
+  ///   requiring the user to unlock.
+  /// • The elapsed time string is passed in and updated every 60 s so the
+  ///   lock screen feels live within Android’s notification constraints.
+  /// • The “I Got Distracted” action button works on the lock screen
+  ///   without unlocking (showsUserInterface: false).
   static Future<void> showSessionActive({
     required String category,
     required Duration elapsed,
+    String subCategory = '',
   }) async {
-    final mins = elapsed.inMinutes;
-    final secs = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes.remainder(60);
+    final s = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final timeStr = h > 0
+        ? '$h:${m.toString().padLeft(2, '0')}:$s'
+        : '$m:$s';
+    final subtitle = subCategory.isNotEmpty
+        ? '$category · $subCategory · $timeStr'
+        : '$category · $timeStr';
 
     await _plugin.show(
       1,
       'NeuroLoad — In Flow',
-      '$category · $mins:$secs',
+      subtitle,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'focus_session',
@@ -128,8 +144,9 @@ class NotificationService {
           priority: Priority.low,
           showWhen: false,
           icon: '@mipmap/ic_launcher',
-          // Bug 09: action button lets users log a distraction from the
-          // lock screen / notification shade without opening the app.
+          // Feature 01: show full content on the lock screen without unlocking
+          visibility: NotificationVisibility.public,
+          // Bug 09 / Feature 01: action button tappable from lock screen
           actions: [_distractedAction],
         ),
       ),

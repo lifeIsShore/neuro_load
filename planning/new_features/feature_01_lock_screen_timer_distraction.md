@@ -1,6 +1,8 @@
 # FEATURE-01 — Live Lock Screen: Session Timer + One-Tap Distraction Logging
 
-**Status:** Proposed  
+**Status:** Android implemented — iOS Live Activities pending native Xcode setup  
+**Android:** Complete (notification visibility, live timer, lock-screen action button)  
+**iOS:** NOT YET IMPLEMENTED — requires native Swift WidgetExtension target in Xcode  
 **Priority:** High  
 **Reported:** 2026-03-07  
 **Type:** New Feature  
