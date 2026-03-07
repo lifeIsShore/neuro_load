@@ -422,6 +422,10 @@ class SessionNotifier extends StateNotifier<SessionState> {
     _tickCount = 0;
     state = const SessionState();
   }
+
+  // Bug 15: convenience getter used by sensor_provider to check the toggle
+  bool get isFlipToStartEnabled =>
+      _ref.read(settingsProvider).flipToStartEnabled;
 }
 
 final sessionProvider = StateNotifierProvider<SessionNotifier, SessionState>(
@@ -435,12 +439,15 @@ class AppSettings {
   final bool localOnlyNotes;
   final bool cloudSyncEnabled;
   final String fontFamily;
+  // Bug 15: user-controlled toggle for flip-to-start / flip-distraction
+  final bool flipToStartEnabled;
 
   const AppSettings({
     this.highContrast = false,
     this.localOnlyNotes = true,
     this.cloudSyncEnabled = false,
     this.fontFamily = 'Inter',
+    this.flipToStartEnabled = true,
   });
 
   AppSettings copyWith({
@@ -448,12 +455,14 @@ class AppSettings {
     bool? localOnlyNotes,
     bool? cloudSyncEnabled,
     String? fontFamily,
+    bool? flipToStartEnabled,
   }) {
     return AppSettings(
       highContrast: highContrast ?? this.highContrast,
       localOnlyNotes: localOnlyNotes ?? this.localOnlyNotes,
       cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
       fontFamily: fontFamily ?? this.fontFamily,
+      flipToStartEnabled: flipToStartEnabled ?? this.flipToStartEnabled,
     );
   }
 }
@@ -464,18 +473,20 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 
   // ── Preference keys ──────────────────────────────────────────────────────
-  static const _kHighContrast    = 'settings_high_contrast';
-  static const _kLocalOnlyNotes  = 'settings_local_only_notes';
-  static const _kCloudSync       = 'settings_cloud_sync';
-  static const _kFontFamily      = 'settings_font_family';
+  static const _kHighContrast      = 'settings_high_contrast';
+  static const _kLocalOnlyNotes    = 'settings_local_only_notes';
+  static const _kCloudSync         = 'settings_cloud_sync';
+  static const _kFontFamily        = 'settings_font_family';
+  static const _kFlipToStart       = 'session_flip_to_start'; // Bug 15
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     state = AppSettings(
-      highContrast:    prefs.getBool(_kHighContrast)   ?? false,
-      localOnlyNotes:  prefs.getBool(_kLocalOnlyNotes) ?? true,
-      cloudSyncEnabled: prefs.getBool(_kCloudSync)     ?? false,
-      fontFamily:      prefs.getString(_kFontFamily)   ?? 'Inter',
+      highContrast:      prefs.getBool(_kHighContrast)    ?? false,
+      localOnlyNotes:    prefs.getBool(_kLocalOnlyNotes)  ?? true,
+      cloudSyncEnabled:  prefs.getBool(_kCloudSync)       ?? false,
+      fontFamily:        prefs.getString(_kFontFamily)    ?? 'Inter',
+      flipToStartEnabled: prefs.getBool(_kFlipToStart)    ?? true,
     );
   }
 
@@ -504,6 +515,14 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(fontFamily: family);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kFontFamily, family);
+  }
+
+  // Bug 15: toggle flip-to-start / flip-distraction feature
+  Future<void> toggleFlipToStart() async {
+    final next = !state.flipToStartEnabled;
+    state = state.copyWith(flipToStartEnabled: next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kFlipToStart, next);
   }
 }
 

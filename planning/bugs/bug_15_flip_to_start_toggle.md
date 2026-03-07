@@ -1,6 +1,6 @@
 # BUG-15 — "Flip to Start" Toggle in Setup: No Enforcement During Session
 
-**Status:** Open  
+**Status:** Fixed  
 **Priority:** High  
 **Reported:** 2026-03-07  
 **Module:** `setup_screen.dart`, `sensor_provider.dart`, `session_provider.dart`  

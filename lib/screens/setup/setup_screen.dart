@@ -63,9 +63,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
     final session = ref.watch(sessionProvider);
     final canStart = session.category != null;
 
+    // Bug 15: only trigger flip-to-start if the toggle is enabled
+    final flipEnabled = ref.watch(
+        settingsProvider.select((s) => s.flipToStartEnabled));
+
     // Listen to face-down sensor
     ref.listen(faceDownStartProvider, (previous, next) {
-      if (next == true && canStart) {
+      if (next == true && canStart && flipEnabled) {
         _startSession();
       }
     });
@@ -211,12 +215,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    'Or flip phone face-down to start automatically.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
+                // Bug 15: replace static hint with interactive toggle
+                _FlipToStartToggle(),
                 const SizedBox(height: 24),
               ],
             ),
@@ -338,6 +338,46 @@ class _BaselineAimSelector extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+// ─── Flip to Start Toggle (Bug 15) ──────────────────────────────────────────
+
+class _FlipToStartToggle extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(
+        settingsProvider.select((s) => s.flipToStartEnabled));
+    return GestureDetector(
+      onTap: () =>
+          ref.read(settingsProvider.notifier).toggleFlipToStart(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: Checkbox(
+              value: enabled,
+              onChanged: (_) =>
+                  ref.read(settingsProvider.notifier).toggleFlipToStart(),
+              activeColor: AppColors.teal,
+              side: const BorderSide(color: AppColors.silverGrayDim),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Flip phone face-down to start automatically',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: enabled
+                      ? AppColors.textSecondary
+                      : AppColors.textTertiary,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

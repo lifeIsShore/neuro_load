@@ -1,6 +1,6 @@
 # BUG-12 — Phone Flip Calibration: Static Timer Instead of Guided Motion Flow
 
-**Status:** Open  
+**Status:** Fixed  
 **Priority:** High  
 **Reported:** 2026-03-07  
 **Module:** Onboarding → Calibration Screen / `sensor_provider.dart`  

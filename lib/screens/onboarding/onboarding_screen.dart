@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../data/app_database.dart';
 import 'package:drift/drift.dart' show Value;
+import '../calibration/calibration_screen.dart'; // Bug 12
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -186,8 +187,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       HapticFeedback.heavyImpact();
                     },
                   ),
-                  _SensorCalibrationPage(
-                    onCalibrated: () => setState(() => _canProceed = true),
+                  // Bug 12: replaced old timer-based calibration with the
+                  // new guided bubble-level flow.
+                  Padding(
+                    padding: EdgeInsets.zero,
+                    child: CalibrationWidget(
+                      standalone: false,
+                      onCalibrated: () => setState(() => _canProceed = true),
+                    ),
                   ),
                   _IntentPracticePage(
                     controller: _intentController,

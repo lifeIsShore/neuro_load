@@ -187,6 +187,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               const SizedBox(height: 24),
 
+              // ── Session Behaviour (Bug 15) ─────────────────────────────────
+              const _SettingsSection(title: 'SESSION BEHAVIOUR'),
+              _SettingsToggle(
+                icon: Icons.screen_rotation_outlined,
+                label: 'Flip to Start',
+                subtitle:
+                    'Flip face-down to start & track distractions',
+                value: settings.flipToStartEnabled,
+                onChanged: (_) => ref
+                    .read(settingsProvider.notifier)
+                    .toggleFlipToStart(),
+              ),
+              // Bug 12: re-enterable calibration from Settings
+              _SettingsTile(
+                icon: Icons.tune_outlined,
+                label: 'Recalibrate Sensor',
+                subtitle: 'Re-run the flip threshold calibration',
+                trailing: const Icon(Icons.chevron_right,
+                    color: AppColors.textTertiary),
+                onTap: () => context.push('/calibration'),
+              ),
+
+              const SizedBox(height: 24),
+
               // ── Accessibility ─────────────────────────────────────────────
               const _SettingsSection(title: 'ACCESSIBILITY'),
               _SettingsToggle(
@@ -327,112 +351,126 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   ];
 
   void _showFontPicker(BuildContext context, String current) {
+    // Bug 13b: use isScrollControlled + DraggableScrollableSheet so all
+    // font options are reachable on small screens.
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,    // Bug 13b: allow taller sheet
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.silverGrayDim,
-                    borderRadius: BorderRadius.circular(2),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.35,
+        maxChildSize: 0.88,
+        builder: (ctx, scrollController) => StatefulBuilder(
+          builder: (ctx, setSheet) => SingleChildScrollView(
+            controller: scrollController,   // Bug 13b: scrollable
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.silverGrayDim,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'CHOOSE FONT',
-                style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
-                      color: AppColors.teal,
-                      letterSpacing: 2,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Applied across the whole app instantly.',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-              ),
-              const SizedBox(height: 20),
-              ...(_kFonts.map((entry) {
-                final fontName = entry.$1;
-                final fontDesc = entry.$2;
-                final isSelected =
-                    ref.read(settingsProvider).fontFamily == fontName;
-                return GestureDetector(
-                  onTap: () async {
-                    await ref.read(settingsProvider.notifier).setFont(fontName);
-                    setSheet(() {});
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.teal.withOpacity(0.08)
-                          : AppColors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+                Text(
+                  'CHOOSE FONT',
+                  style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                        color: AppColors.teal,
+                        letterSpacing: 2,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Applied across the whole app instantly.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                ),
+                const SizedBox(height: 20),
+                ...(_kFonts.map((entry) {
+                  final fontName = entry.$1;
+                  final fontDesc = entry.$2;
+                  final isSelected =
+                      ref.read(settingsProvider).fontFamily == fontName;
+                  return GestureDetector(
+                    onTap: () async {
+                      await ref
+                          .read(settingsProvider.notifier)
+                          .setFont(fontName);
+                      setSheet(() {});
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.teal.withOpacity(0.5)
-                            : AppColors.silverGrayDim,
-                        width: isSelected ? 1 : 0.5,
+                            ? AppColors.teal.withOpacity(0.08)
+                            : AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.teal.withOpacity(0.5)
+                              : AppColors.silverGrayDim,
+                          width: isSelected ? 1 : 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  fontName,
+                                  style: TextStyle(
+                                    fontFamily: fontName,
+                                    fontSize: 16,
+                                    color: isSelected
+                                        ? AppColors.teal
+                                        : AppColors.textPrimary,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  fontDesc,
+                                  style: Theme.of(ctx)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.textTertiary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle_rounded,
+                                size: 18, color: AppColors.teal),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                fontName,
-                                style: TextStyle(
-                                  fontFamily: fontName,
-                                  fontSize: 16,
-                                  color: isSelected
-                                      ? AppColors.teal
-                                      : AppColors.textPrimary,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                fontDesc,
-                                style:
-                                    Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                                          color: AppColors.textTertiary,
-                                        ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (isSelected)
-                          const Icon(Icons.check_circle_rounded,
-                              size: 18, color: AppColors.teal),
-                      ],
-                    ),
-                  ),
-                );
-              })),
-            ],
+                  );
+                })),
+              ],
+            ),
           ),
         ),
       ),

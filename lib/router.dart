@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/session_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/calibration/calibration_screen.dart';
 import 'screens/setup/setup_screen.dart';
 import 'screens/timer/timer_screen.dart';
 import 'screens/summary/summary_screen.dart';
@@ -71,6 +72,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/paywall',
         builder: (context, state) => const PaywallScreen(),
+      ),
+      // Bug 12: standalone recalibration screen, navigated to from Settings
+      GoRoute(
+        path: '/calibration',
+        builder: (context, state) => const CalibrationScreen(),
       ),
       GoRoute(
         path: '/break',

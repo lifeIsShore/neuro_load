@@ -58,13 +58,17 @@ class AppTheme {
     final borderColor =
         highContrast ? AppColors.highContrastBorder : AppColors.silverGrayDim;
 
+    // Bug 13a fix: use darkTheme's textTheme as the base (not a plain
+    // ThemeData.dark()) so all the custom Inter styles are preserved when
+    // only the fontFamily changes.  _buildTextTheme then overrides the
+    // fontFamily on every style while keeping sizes, weights, and colors.
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
         primary: accent,
         outline: borderColor,
       ),
       textTheme: _buildTextTheme(
-        ThemeData.dark(useMaterial3: true).textTheme,
+        base.textTheme,             // Bug 13a: was ThemeData.dark().textTheme
         fontFamily: fontFamily,
         highContrast: highContrast,
       ),
@@ -213,6 +217,26 @@ class AppTheme {
     final tertiaryColor =
         highContrast ? AppColors.silverGray : AppColors.textTertiary;
 
+    // Bug 13a fix: resolve the UI font dynamically so selecting a non-Inter
+    // font in Settings actually changes how text renders across the whole app.
+    // GoogleFonts.getFont() returns the correct TextStyle for any Google Font.
+    TextStyle uiFont({
+      required double fontSize,
+      required FontWeight fontWeight,
+      required Color color,
+      double? letterSpacing,
+      double? height,
+    }) {
+      return GoogleFonts.getFont(
+        fontFamily,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      );
+    }
+
     return base.copyWith(
       displayLarge: GoogleFonts.playfairDisplay(
         fontSize: 72,
@@ -231,70 +255,70 @@ class AppTheme {
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineLarge: GoogleFonts.inter(
+      headlineLarge: uiFont(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         letterSpacing: -0.5,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: uiFont(
         fontSize: 22,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineSmall: uiFont(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       ),
-      titleLarge: GoogleFonts.inter(
+      titleLarge: uiFont(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
         letterSpacing: 0.2,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: uiFont(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
       ),
-      titleSmall: GoogleFonts.inter(
+      titleSmall: uiFont(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
         letterSpacing: 0.5,
       ),
-      bodyLarge: GoogleFonts.inter(
+      bodyLarge: uiFont(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.6,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: uiFont(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: bodyColor,
         height: 1.5,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: uiFont(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: tertiaryColor,
         height: 1.4,
       ),
-      labelLarge: GoogleFonts.inter(
+      labelLarge: uiFont(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
         letterSpacing: 0.8,
       ),
-      labelMedium: GoogleFonts.inter(
+      labelMedium: uiFont(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: bodyColor,
         letterSpacing: 0.5,
       ),
-      labelSmall: GoogleFonts.inter(
+      labelSmall: uiFont(
         fontSize: 10,
         fontWeight: FontWeight.w500,
         color: tertiaryColor,

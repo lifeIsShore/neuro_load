@@ -1,6 +1,6 @@
 # BUG-14 — Phone Flip Oversensitivity: Multiple Distraction Logs from a Single Flip Event
 
-**Status:** Open  
+**Status:** Fixed  
 **Priority:** Critical  
 **Reported:** 2026-03-07  
 **Module:** `sensor_provider.dart` → `FaceDownNotifier._onEvent()` / `session_provider.dart` → `SessionNotifier.addLap()`  

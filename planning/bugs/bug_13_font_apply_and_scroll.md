@@ -1,6 +1,6 @@
 # BUG-13 — Font Selection: Typeface Does Not Apply + Bottom Sheet Not Scrollable
 
-**Status:** Open  
+**Status:** Fixed  
 **Priority:** Medium  
 **Reported:** 2026-03-07  
 **Module:** Settings → Font Picker / `settings_screen.dart` → `_showFontPicker()`  

@@ -48,8 +48,20 @@ class FaceDownNotifier extends StateNotifier<bool> {
 
   StreamSubscription<AccelerometerEvent>? _sub;
   Timer? _holdTimer;
+  Timer? _faceUpHoldTimer;          // Bug 14: hold timer for face-up transition
   bool _isDown = false;
   double _zThreshold = _defaultZThreshold;
+
+  // Bug 14: hysteresis — face-up is only confirmed when Z rises above this
+  // (a few units above the face-down threshold to prevent oscillation)
+  static const double _faceUpHysteresisOffset = 5.0;
+  double get _faceUpThreshold => _zThreshold + _faceUpHysteresisOffset;
+
+  // Bug 14: per-distraction cooldown — prevents multiple logs from one flip
+  DateTime? _lastPhoneDistractionAt;
+  static const _distractionCooldown = Duration(seconds: 6);
+  static const _faceUpHoldDuration = Duration(milliseconds: 800);
+
   Duration _currentPeriod = _idlePeriod;
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -85,27 +97,55 @@ class FaceDownNotifier extends StateNotifier<bool> {
 
   void _onEvent(AccelerometerEvent e) {
     final nowDown = e.z <= _zThreshold;
+    // Bug 14: use hysteresis gap — face-up only triggers when Z rises well
+    // above the face-down threshold, preventing oscillation logs.
+    final nowUp = e.z >= _faceUpThreshold;
 
     if (nowDown && !_isDown) {
       // Start hold timer for face-down detection (session start trigger)
+      _faceUpHoldTimer?.cancel(); // cancel any pending face-up detection
       _isDown = true;
       _holdTimer = Timer(_holdDuration, () {
         if (_isDown) state = true;
       });
-    } else if (!nowDown && _isDown) {
-      // Bug 10 fix: phone flipped face-up during an active session
-      // → auto-log a distraction so users can't silently check messages.
+    } else if (nowUp && _isDown) {
+      // Bug 10 fix + Bug 14 fix: phone clearly face-up during active session.
+      // Use a hold timer so brief oscillations don't count.
       _isDown = false;
       _holdTimer?.cancel();
 
-      final phase = _ref.read(sessionProvider).phase;
-      if (phase == SessionPhase.active) {
-        _ref.read(sessionProvider.notifier).addLap(
-          trigger: DistractionTrigger.phone,
-          note: 'auto: phone flipped up',
-        );
-      }
+      _faceUpHoldTimer?.cancel();
+      _faceUpHoldTimer = Timer(_faceUpHoldDuration, () {
+        _logPhoneDistraction();
+      });
+    } else if (!nowUp && !nowDown && _isDown) {
+      // Phone is mid-transition — cancel any pending face-up log.
+      _faceUpHoldTimer?.cancel();
     }
+  }
+
+  /// Log a phone-flip distraction, subject to cooldown check.
+  void _logPhoneDistraction() {
+    // Bug 14: cooldown prevents multiple logs within 6 seconds
+    final now = DateTime.now();
+    if (_lastPhoneDistractionAt != null &&
+        now.difference(_lastPhoneDistractionAt!) < _distractionCooldown) {
+      return;
+    }
+
+    final phase = _ref.read(sessionProvider).phase;
+    if (phase != SessionPhase.active) return;
+
+    // Bug 15: respect the flip-to-start toggle — if disabled, no auto-distraction
+    final flipEnabled =
+        _ref.read(sessionProvider.notifier).isFlipToStartEnabled;
+    if (!flipEnabled) return;
+
+    _lastPhoneDistractionAt = now;
+    _ref.read(sessionProvider.notifier).addLap(
+      trigger: DistractionTrigger.phone,
+      note: 'auto: phone flipped up',
+    );
   }
 
   /// Reset after the start has been consumed
@@ -115,6 +155,7 @@ class FaceDownNotifier extends StateNotifier<bool> {
   void dispose() {
     _sub?.cancel();
     _holdTimer?.cancel();
+    _faceUpHoldTimer?.cancel(); // Bug 14: cancel face-up timer on dispose
     super.dispose();
   }
 }
