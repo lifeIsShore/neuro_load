@@ -1,6 +1,6 @@
 # FEATURE-03 — Home Screen Widget: FlowState Timer at a Glance
 
-**Status:** Proposed  
+**Status:** Implemented (Flutter + Android Glance + iOS WidgetKit — App Group must be configured in Xcode)  
 **Priority:** High  
 **Reported:** 2026-03-07  
 **Type:** New Feature  

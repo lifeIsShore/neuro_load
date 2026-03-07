@@ -24,6 +24,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Feature 01/03: neuroload:// deep-link scheme -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="neuroload"/>
+            </intent-filter>
         </activity>
 
         <!-- flutter_foreground_task service (Android 14+ specialUse type) -->
@@ -36,6 +43,27 @@
                 android:value="Measures user focus time during an active session"/>
         </service>
 
+        <!--
+          Feature 03: NeuroLoad home screen widget.
+          The receiver handles APPWIDGET_UPDATE broadcasts from the launcher
+          and also serves as the Glance widget host.
+        -->
+        <receiver
+            android:name=".NeuroLoadWidgetReceiver"
+            android:exported="true"
+            android:label="NeuroLoad">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/neuro_load_widget_info" />
+        </receiver>
+
+        <!--
+          Feature 01 / 03: deep-link intent filter so neuroload:// URLs
+          (e.g. neuroload://setup, neuroload://distracted) open MainActivity.
+        -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

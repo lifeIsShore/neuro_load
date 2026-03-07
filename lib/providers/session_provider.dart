@@ -9,6 +9,7 @@ import '../data/database_providers.dart';
 import '../services/foreground_service.dart';
 import '../services/notification_service.dart';
 import '../services/live_activity_service.dart'; // Feature 01
+import '../services/widget_update_service.dart';   // Feature 03
 import '../services/pending_session_store.dart';
 import 'sensor_provider.dart' show ZombieSession;
 import 'subscription_provider.dart';
@@ -264,6 +265,15 @@ class SessionNotifier extends StateNotifier<SessionState> {
       category: state.category?.label ?? 'Focus',
       subCategory: state.subCategory ?? '',
     );
+
+    // Feature 03: push session-active state to the home screen widget
+    WidgetUpdateService.update(
+      isActive: true,
+      elapsedSeconds: 0,
+      category: state.category?.label ?? 'Focus',
+      subCategory: state.subCategory ?? '',
+      lapCount: 0,
+    );
   }
 
   /// Tick counter — used to throttle notification updates and auto-saves.
@@ -289,6 +299,14 @@ class SessionNotifier extends StateNotifier<SessionState> {
         );
         LiveActivityService.update(
           elapsedSeconds: state.elapsed.inSeconds,
+          lapCount: state.laps.length,
+        );
+        // Feature 03: sync widget timer every 60 s
+        WidgetUpdateService.update(
+          isActive: true,
+          elapsedSeconds: state.elapsed.inSeconds,
+          category: state.category?.label ?? 'Focus',
+          subCategory: state.subCategory ?? '',
           lapCount: state.laps.length,
         );
       }
@@ -355,6 +373,15 @@ class SessionNotifier extends StateNotifier<SessionState> {
       lapDurationSeconds: lapDuration,
     );
     state = state.copyWith(laps: [...state.laps, newLap]);
+
+    // Feature 03: update lap count on widget immediately after every lap
+    WidgetUpdateService.update(
+      isActive: true,
+      elapsedSeconds: state.elapsed.inSeconds,
+      category: state.category?.label ?? 'Focus',
+      subCategory: state.subCategory ?? '',
+      lapCount: state.laps.length,
+    );
   }
 
   Future<void> finishSession() async {
@@ -367,6 +394,11 @@ class SessionNotifier extends StateNotifier<SessionState> {
     NotificationService.onNotificationDistraction = null; // Bug 09: unregister
     await LiveActivityService.end(); // Feature 01: end iOS Live Activity
     _tickCount = 0;
+    // Feature 03: clear widget to idle, pass last session info for idle display
+    WidgetUpdateService.clear(
+      lastSessionMinutes: state.elapsed.inMinutes,
+      lastSessionCategory: state.category?.label,
+    );
 
     // Persist finish + laps to DB
     final dbId = state.dbSessionId;
@@ -436,6 +468,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
     NotificationService.dismissSessionNotification();
     NotificationService.onNotificationDistraction = null; // Bug 09: unregister
     LiveActivityService.end(); // Feature 01
+    WidgetUpdateService.clear(); // Feature 03
     _tickCount = 0;
     state = const SessionState();
   }

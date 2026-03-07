@@ -4,25 +4,28 @@ import 'package:flutter/foundation.dart';
 
 // ── Feature 01: iOS Live Activity Service ────────────────────────────────────
 //
-// This service is the Flutter-side bridge to the native iOS ActivityKit
-// Live Activity extension.
+// ⚠️  TODO — iOS IMPLEMENTATION NOT YET DONE ⚠️
+// ================================================================
+// Feature 01 is ANDROID ONLY for now. The iOS Live Activity side
+// is stubbed and requires native Xcode work before it will function.
 //
-// NATIVE SIDE REQUIREMENT (not implemented here — requires Xcode):
-//   A Swift Widget Extension target named "NeuroLoadLiveActivity" must be
-//   created in the Xcode project.  It defines NeuroLoadAttributes conforming
-//   to ActivityAttributes and the SwiftUI lock-screen + Dynamic Island views.
+// What still needs to be built in Xcode:
+//   1. New Widget Extension target: "NeuroLoadLiveActivity"
+//   2. NeuroLoadAttributes.swift (ActivityAttributes + ContentState)
+//   3. SwiftUI lock-screen + Dynamic Island view
+//   4. MethodChannel handler in AppDelegate.swift responding to:
+//        startActivity / updateActivity / endActivity / areActivitiesEnabled
+//   5. "Distracted" button tap → open neuroload://distracted deeplink
+//      (already handled in router.dart on the Flutter side)
+//   6. ios/Runner/Info.plist entries:
+//        <key>NSSupportsLiveActivities</key><true/>
+//        <key>NSSupportsLiveActivitiesFrequentUpdates</key><true/>
 //
-//   The extension communicates back to Flutter via the same MethodChannel
-//   when the user taps the "Distracted" button on the Live Activity:
-//     channel.invokeMethod('onLiveActivityDistraction')
-//   which triggers the deeplink neuroload://distracted handled in router.dart.
+// The Flutter call sites in session_provider.dart are already wired —
+// they activate automatically once the native side exists.
+// ================================================================
 //
-// PLIST REQUIREMENTS (ios/Runner/Info.plist):
-//   <key>NSSupportsLiveActivities</key><true/>
-//   <key>NSSupportsLiveActivitiesFrequentUpdates</key><true/>
-//
-// This Dart class is a no-op on Android — all calls short-circuit on
-// Platform.isIOS checks.
+// All methods in this class are no-ops on Android (Platform.isIOS guard).
 
 class LiveActivityService {
   static const _channel = MethodChannel('neuroload/live_activity');

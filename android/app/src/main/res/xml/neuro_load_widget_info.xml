@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Feature 03: NeuroLoad home screen widget provider metadata.
+
+  minWidth / minHeight: 4×2 grid cells (~250×80 dp).
+  updatePeriodMillis: Android allows at most 30 min; live updates during a
+    session are pushed by the foreground service via MainActivity.kt instead.
+  resizeMode: none — fixed size, no user resizing.
+-->
+<appwidget-provider
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="80dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    android:resizeMode="none"
+    android:description="@string/widget_description" />
