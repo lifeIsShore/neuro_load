@@ -953,7 +953,7 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.teal,
+            activeColor: AppColors.teal,
           ),
         ],
       ),
