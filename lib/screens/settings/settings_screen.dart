@@ -242,8 +242,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: AppColors.dangerDim.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: AppColors.danger.withOpacity(0.3),
-                      width: 0.5),
+                      color: AppColors.danger.withOpacity(0.3), width: 0.5),
                 ),
                 child: _SettingsTile(
                   icon: Icons.delete_forever_outlined,
@@ -787,7 +786,7 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.teal,
+            activeThumbColor: AppColors.teal,
           ),
         ],
       ),
