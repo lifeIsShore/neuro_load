@@ -5,7 +5,7 @@
 # Jobs:
 #   1. test            → flutter analyze + unit tests
 #   2. build_apk       → release APK signed with debug key (for device testing)
-#   3. build_debug_apk → debug APK
+#   3. build_debug_apk → debug APK  [PRs + main pushes]
 #   4. build_aab       → DISABLED until Play Store account is ready
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -89,21 +89,30 @@ jobs:
       - name: Run code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build release APK (debug-signed for device testing)
-        run: flutter build apk --release --obfuscate --split-debug-info=build/symbols
+      - name: Build release APKs (split per ABI)
+        run: flutter build apk --release --obfuscate --split-debug-info=build/symbols --split-per-abi
 
-      - name: Upload APK artifact
+      - name: Upload release APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neuroload-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: neuroload-release-apks
+          path: build/app/outputs/flutter-apk/app-*-release.apk
           retention-days: 14
+
+      - name: Upload debug symbols (for crash symbolication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuroload-release-symbols
+          path: build/symbols/
+          retention-days: 90
 
   # ── 3. Build Debug APK ───────────────────────────────────────────────────────
   build_debug_apk:
     name: Build Debug APK
     runs-on: ubuntu-latest
     needs: test
+    # Build debug APK on PRs (for testers) and on main pushes
+    if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
     steps:
       - uses: actions/checkout@v4
 
@@ -124,14 +133,14 @@ jobs:
       - name: Run code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Build debug APK (split per ABI)
+        run: flutter build apk --debug --split-per-abi
 
-      - name: Upload Debug APK artifact
+      - name: Upload Debug APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neuroload-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: neuroload-debug-apks
+          path: build/app/outputs/flutter-apk/app-*-debug.apk
           retention-days: 14
 
   # ── 4. Build Release AAB — DISABLED (no Play Store account yet) ───────────
