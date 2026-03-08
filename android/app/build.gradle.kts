@@ -58,8 +58,12 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     // Feature 03: Jetpack Glance for home screen widget
-    implementation("androidx.glance:glance-appwidget:1.1.0")
-    implementation("androidx.glance:glance-material3:1.1.0")
+    // 1.1.0 was compiled with Kotlin 2.x (K2); its inline functions cannot be
+    // inlined by the Kotlin 1.9.x compiler that Flutter 3.27 uses, producing
+    // "couldn't find inline method currentState" at compile time.
+    // 1.0.0 is the last release compiled with Kotlin 1.x and is fully compatible.
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+    implementation("androidx.glance:glance-material3:1.0.0")
 
     // Coroutines (already implied by Glance, explicit for clarity)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
