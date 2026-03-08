@@ -709,7 +709,7 @@ class _SensorCalibrationPageState extends State<_SensorCalibrationPage>
               height: 160,
               decoration: BoxDecoration(
                 color: _testHolding
-                    ? AppColors.teal.withOpacity(0.15)
+                    ? AppColors.teal.withValues(alpha: 0.15)
                     : AppColors.surfaceElevated,
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -778,7 +778,7 @@ class _ArcPainter extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color = AppColors.silverGrayDim.withOpacity(0.3)
+        ..color = AppColors.silverGrayDim.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6,
     );

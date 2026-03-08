@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
@@ -42,8 +41,10 @@ class WidgetUpdateService {
         'category': category,
         'subCategory': subCategory,
         'lapCount': lapCount,
-        if (lastSessionMinutes != null) 'lastSessionMinutes': lastSessionMinutes,
-        if (lastSessionCategory != null) 'lastSessionCategory': lastSessionCategory,
+        if (lastSessionMinutes != null)
+          'lastSessionMinutes': lastSessionMinutes,
+        if (lastSessionCategory != null)
+          'lastSessionCategory': lastSessionCategory,
       });
     } on PlatformException catch (e) {
       debugPrint('[WidgetUpdateService] update failed: ${e.message}');
@@ -60,8 +61,10 @@ class WidgetUpdateService {
   }) async {
     try {
       await _channel.invokeMethod<void>('clearWidget', {
-        if (lastSessionMinutes != null) 'lastSessionMinutes': lastSessionMinutes,
-        if (lastSessionCategory != null) 'lastSessionCategory': lastSessionCategory,
+        if (lastSessionMinutes != null)
+          'lastSessionMinutes': lastSessionMinutes,
+        if (lastSessionCategory != null)
+          'lastSessionCategory': lastSessionCategory,
       });
     } on PlatformException catch (e) {
       debugPrint('[WidgetUpdateService] clear failed: ${e.message}');

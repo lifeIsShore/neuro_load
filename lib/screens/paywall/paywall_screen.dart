@@ -70,7 +70,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: AppColors.teal.withOpacity(0.4), width: 1),
+                      color: AppColors.teal.withValues(alpha: 0.4), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,10 +80,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.teal.withOpacity(0.15),
+                        color: AppColors.teal.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(100),
                         border: Border.all(
-                          color: AppColors.teal.withOpacity(0.4),
+                          color: AppColors.teal.withValues(alpha: 0.4),
                           width: 0.5,
                         ),
                       ),

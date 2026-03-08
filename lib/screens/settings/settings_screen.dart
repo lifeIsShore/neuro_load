@@ -192,12 +192,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsToggle(
                 icon: Icons.screen_rotation_outlined,
                 label: 'Flip to Start',
-                subtitle:
-                    'Flip face-down to start & track distractions',
+                subtitle: 'Flip face-down to start & track distractions',
                 value: settings.flipToStartEnabled,
-                onChanged: (_) => ref
-                    .read(settingsProvider.notifier)
-                    .toggleFlipToStart(),
+                onChanged: (_) =>
+                    ref.read(settingsProvider.notifier).toggleFlipToStart(),
               ),
               // Bug 12: re-enterable calibration from Settings
               _SettingsTile(
@@ -273,10 +271,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: 'DANGER ZONE', labelColor: AppColors.danger),
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.dangerDim.withOpacity(0.2),
+                  color: AppColors.dangerDim.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: AppColors.danger.withOpacity(0.3), width: 0.5),
+                  color: AppColors.danger.withValues(alpha: 0.3), width: 0.5),
                 ),
                 child: _SettingsTile(
                   icon: Icons.delete_forever_outlined,
@@ -321,7 +319,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.success.withOpacity(0.12),
+            color: AppColors.success.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(100),
           ),
           child: Text(
@@ -336,7 +334,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.danger.withOpacity(0.12),
+            color: AppColors.danger.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(100),
           ),
           child: Text(
@@ -365,7 +363,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // font options are reachable on small screens.
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,    // Bug 13b: allow taller sheet
+      isScrollControlled: true, // Bug 13b: allow taller sheet
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -377,7 +375,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         maxChildSize: 0.88,
         builder: (ctx, scrollController) => StatefulBuilder(
           builder: (ctx, setSheet) => SingleChildScrollView(
-            controller: scrollController,   // Bug 13b: scrollable
+            controller: scrollController, // Bug 13b: scrollable
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,12 +427,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.teal.withOpacity(0.08)
+                            ? AppColors.teal.withValues(alpha: 0.08)
                             : AppColors.surfaceElevated,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected
-                              ? AppColors.teal.withOpacity(0.5)
+                              ? AppColors.teal.withValues(alpha: 0.5)
                               : AppColors.silverGrayDim,
                           width: isSelected ? 1 : 0.5,
                         ),
@@ -828,13 +826,13 @@ class _ThemePicker extends StatelessWidget {
                 border: Border.all(
                   color: isSelected
                       ? palette.accent
-                      : palette.border.withOpacity(0.6),
+                      : palette.border.withValues(alpha: 0.6),
                   width: isSelected ? 2 : 1,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: palette.accent.withOpacity(0.3),
+                          color: palette.accent.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -849,13 +847,13 @@ class _ThemePicker extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: palette.surfaceElevated,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: palette.border.withOpacity(0.4),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                      color: palette.surfaceElevated,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                      color: palette.border.withValues(alpha: 0.4),
                             width: 0.5,
                           ),
                         ),
@@ -953,7 +951,7 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.teal,
+            activeThumbColor: AppColors.teal,
           ),
         ],
       ),

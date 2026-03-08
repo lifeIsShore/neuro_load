@@ -391,9 +391,9 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return accent.withOpacity(0.4);
+            return accent.withValues(alpha: 0.4);
           }
-          return p.border.withOpacity(0.5);
+          return p.border.withValues(alpha: 0.5);
         }),
       ),
     );

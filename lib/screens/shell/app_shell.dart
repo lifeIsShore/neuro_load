@@ -130,7 +130,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: AppColors.silverGrayDim.withOpacity(0.3),
+              color: AppColors.silverGrayDim.withValues(alpha: 0.3),
               width: 0.5,
             ),
           ),

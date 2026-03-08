@@ -209,10 +209,10 @@ class _CoachInsightCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.teal.withOpacity(0.08),
+        color: AppColors.teal.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: AppColors.teal.withOpacity(0.3), width: 0.5),
+            color: AppColors.teal.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         children: [
@@ -394,7 +394,7 @@ class _ClockRingView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.teal.withOpacity(0.1),
+                      AppColors.teal.withValues(alpha: 0.1),
                       AppColors.teal,
                     ],
                   ),
@@ -481,20 +481,17 @@ class _ClockRingPainter extends CustomPainter {
           center.dx + arcRadius * math.cos(midAngle),
           center.dy + arcRadius * math.sin(midAngle),
         );
-        // The original instruction for this part was problematic.
-        // Assuming the intent was to replace `withOpacity` with `withValues`
-        // and keep the drawing method similar, but with a different color.
         canvas.drawCircle(
           dotPos,
           3,
-          Paint()..color = AppColors.teal.withOpacity(0.9),
+          Paint()..color = AppColors.teal.withValues(alpha: 0.9),
         );
       }
     }
 
     // ── Tick marks for 00, 06, 12, 18 ──────────────────────────────────────
     final tickPaint = Paint()
-      ..color = AppColors.textTertiary.withOpacity(0.4)
+      ..color = AppColors.textTertiary.withValues(alpha: 0.4)
       ..strokeWidth = 1;
     for (final h in [0, 6, 12, 18]) {
       final angle = startOffset + h * sweepPerHour;
@@ -563,7 +560,7 @@ class _GridView extends StatelessWidget {
               return Container(
                 decoration: BoxDecoration(
                   color: count == 0
-                      ? AppColors.silverGrayDim.withOpacity(0.15)
+                      ? AppColors.silverGrayDim.withValues(alpha: 0.15)
                       : AppColors.teal.withValues(alpha: intensity),
                   borderRadius: BorderRadius.circular(2),
                 ),
@@ -706,7 +703,7 @@ class _OneRMLineChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             getDrawingHorizontalLine: (_) => FlLine(
-                color: AppColors.silverGrayDim.withOpacity(0.3),
+                color: AppColors.silverGrayDim.withValues(alpha: 0.3),
                 strokeWidth: 0.5),
           ),
           titlesData: FlTitlesData(
@@ -752,8 +749,8 @@ class _OneRMLineChart extends StatelessWidget {
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.teal.withOpacity(0.2),
-                    AppColors.teal.withOpacity(0.0),
+                    AppColors.teal.withValues(alpha: 0.2),
+                    AppColors.teal.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,

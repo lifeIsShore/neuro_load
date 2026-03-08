@@ -529,9 +529,9 @@ class _CalibrationWidgetState extends State<CalibrationWidget>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: _testPassed
-                ? AppColors.teal.withOpacity(0.12)
+                ? AppColors.teal.withValues(alpha: 0.12)
                 : _testTimedOut
-                    ? AppColors.dangerDim.withOpacity(0.15)
+                    ? AppColors.dangerDim.withValues(alpha: 0.15)
                     : AppColors.surfaceElevated,
             border: Border.all(
               color: _testPassed
@@ -696,7 +696,7 @@ class _BubblePainter extends CustomPainter {
     canvas.drawCircle(c, gaugeR,
         Paint()
           ..color = (isLocked ? AppColors.teal : AppColors.silverGrayDim)
-              .withOpacity(0.35)
+              .withValues(alpha: 0.35)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5);
 
@@ -715,7 +715,7 @@ class _BubblePainter extends CustomPainter {
 
     // Cross-hairs
     final xp = Paint()
-      ..color = AppColors.silverGrayDim.withOpacity(0.3)
+      ..color = AppColors.silverGrayDim.withValues(alpha: 0.3)
       ..strokeWidth = 0.5;
     canvas.drawLine(Offset(c.dx - gaugeR, c.dy), Offset(c.dx + gaugeR, c.dy), xp);
     canvas.drawLine(Offset(c.dx, c.dy - gaugeR), Offset(c.dx, c.dy + gaugeR), xp);
@@ -724,21 +724,21 @@ class _BubblePainter extends CustomPainter {
     canvas.drawCircle(c, bubbleR + 6,
         Paint()
           ..color = (isLocked ? AppColors.teal : AppColors.silverGrayDim)
-              .withOpacity(0.12));
+              .withValues(alpha: 0.12));
 
     // Bubble fill
     final bc = c + Offset(dx, dy);
     canvas.drawCircle(bc, bubbleR,
         Paint()
           ..color = isLocked
-              ? AppColors.teal.withOpacity(0.85)
-              : AppColors.silverGray.withOpacity(0.55));
+              ? AppColors.teal.withValues(alpha: 0.85)
+              : AppColors.silverGray.withValues(alpha: 0.55));
 
     // Bubble highlight
     canvas.drawCircle(
         bc + Offset(-bubbleR * 0.25, -bubbleR * 0.25), bubbleR * 0.3,
         Paint()
-          ..color = Colors.white.withOpacity(isLocked ? 0.45 : 0.28));
+          ..color = Colors.white.withValues(alpha: isLocked ? 0.45 : 0.28));
 
     // Tick when locked
     if (isLocked) {
@@ -782,7 +782,7 @@ class _StepDots extends StatelessWidget {
                 color: d
                     ? AppColors.teal
                     : cur
-                        ? AppColors.teal.withOpacity(0.4)
+                        ? AppColors.teal.withValues(alpha: 0.4)
                         : AppColors.silverGrayDim,
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -814,14 +814,14 @@ class _CpList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: d
-                ? AppColors.teal.withOpacity(0.08)
+                ? AppColors.teal.withValues(alpha: 0.08)
                 : cur
                     ? AppColors.surfaceElevated
                     : AppColors.background,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: d
-                  ? AppColors.teal.withOpacity(0.4)
+                  ? AppColors.teal.withValues(alpha: 0.4)
                   : cur
                       ? AppColors.silverGrayDim
                       : Colors.transparent,
@@ -872,12 +872,12 @@ class _ResultRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: highlight
-            ? AppColors.teal.withOpacity(0.08)
+            ? AppColors.teal.withValues(alpha: 0.08)
             : AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: highlight
-              ? AppColors.teal.withOpacity(0.4)
+              ? AppColors.teal.withValues(alpha: 0.4)
               : AppColors.silverGrayDim,
           width: 0.5,
         ),
@@ -911,7 +911,7 @@ class _PhoneIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.teal.withOpacity(0.5), width: 1.5),
+        border: Border.all(color: AppColors.teal.withValues(alpha: 0.5), width: 1.5),
       ),
       child: const Icon(Icons.screen_lock_portrait, size: 28, color: AppColors.teal),
     );
