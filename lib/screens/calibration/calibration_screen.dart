@@ -370,7 +370,7 @@ class _CalibrationWidgetState extends State<CalibrationWidget>
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.75),
         ),
         const Spacer(),
-        Center(child: _PhoneIcon(rotated: false)),
+        const Center(child: _PhoneIcon(rotated: false)),
         const SizedBox(height: 20),
         Center(
           child: Text(

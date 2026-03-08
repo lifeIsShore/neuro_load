@@ -951,7 +951,10 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.teal,
+            thumbColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) return AppColors.teal;
+              return null;
+            }),
           ),
         ],
       ),
