@@ -1,7 +1,6 @@
 package com.neuroload.neuro_load
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -12,14 +11,13 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.currentState
@@ -105,7 +103,6 @@ private fun NeuroLoadWidgetContent(
     lastMins: Int?,
     lastCat: String?,
 ) {
-    // Obsidian Noir background (respects dark/light widget host in future)
     val bgColor = Color(0xFF0A0A0A)
     val teal    = Color(0xFF00B5A5)
     val grey    = Color(0xFF888888)
@@ -183,11 +180,12 @@ private fun NeuroLoadWidgetContent(
                         )
                     }
                     Spacer(modifier = GlanceModifier.defaultWeight())
-                    // Distracted button — small, outlined, bottom-right
+                    // Distracted button — fix #1: clickable as GlanceModifier, not Text modifier
                     Box(
                         modifier = GlanceModifier
                             .background(ColorProvider(Color(0xFF1E1E1E), Color(0xFF1E1E1E)))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .clickable(actionRunCallback<WidgetDistractionCallback>()),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -195,9 +193,6 @@ private fun NeuroLoadWidgetContent(
                             style = TextStyle(
                                 color = ColorProvider(grey, grey),
                                 fontSize = 11.sp,
-                            ),
-                            modifier = GlanceModifier.clickable(
-                                actionRunCallback<WidgetDistractionCallback>()
                             ),
                         )
                     }
@@ -218,24 +213,13 @@ private fun NeuroLoadWidgetContent(
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // Start session CTA — centred, tap opens Setup screen
+                // Start session CTA — fix #2: actionStartActivity<T>() instead of Intent overload
                 Box(
                     modifier = GlanceModifier
                         .fillMaxWidth()
                         .background(ColorProvider(teal, teal))
                         .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .clickable(
-                            actionStartActivity(
-                                Intent(Intent.ACTION_VIEW).apply {
-                                    setClassName(
-                                        "com.neuroload.neuro_load",
-                                        "com.neuroload.neuro_load.MainActivity"
-                                    )
-                                    data = android.net.Uri.parse("neuroload://setup")
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                            )
-                        ),
+                        .clickable(actionStartActivity<MainActivity>()),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -272,8 +256,9 @@ private fun NeuroLoadWidgetContent(
 }
 
 // ── Widget Receiver ───────────────────────────────────────────────────────────
+// Fix #3: @GlanceAppWidgetReceiver is not a valid annotation in Glance 1.1.0.
+// The receiver is registered in AndroidManifest.xml instead.
 
-@GlanceAppWidgetReceiver
 class NeuroLoadWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = NeuroLoadWidget()
 }
