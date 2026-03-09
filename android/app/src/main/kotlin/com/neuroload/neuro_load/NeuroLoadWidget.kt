@@ -17,7 +17,6 @@ import androidx.glance.appwidget.*
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.*
 import androidx.glance.text.*
-import androidx.glance.state.GlanceState
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.unit.ColorProvider
@@ -45,9 +44,8 @@ class NeuroLoadWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<Preferences> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val prefs = GlanceState.getValue(context, PreferencesGlanceStateDefinition, id.toString())
-
         provideContent {
+            val prefs          = currentState<Preferences>()
             val isActive       = prefs[WidgetKeys.SESSION_ACTIVE]    ?: false
             val elapsedSecs    = prefs[WidgetKeys.ELAPSED_SECONDS]   ?: 0
             val category       = prefs[WidgetKeys.CATEGORY]          ?: ""

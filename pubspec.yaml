@@ -50,7 +50,7 @@ dependencies:
   share_plus: ^10.0.2
 
   # Timezone support (for scheduled daily notifications)
-  flutter_timezone: ^1.0.8
+  flutter_timezone: ^2.0.0
   timezone: ^0.9.4
 
   # HTTP client (for Supabase REST upsert)
