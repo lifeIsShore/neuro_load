@@ -13,27 +13,13 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.*
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.appWidgetBackground
-import androidx.glance.appwidget.provideContent
-import androidx.glance.background
-import androidx.glance.currentState
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.width
-import androidx.glance.layout.wrapContentHeight
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
+import androidx.glance.layout.*
+import androidx.glance.text.*
+import androidx.glance.state.GlanceState
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.unit.ColorProvider
 
 // ── NeuroLoad Home Screen Widget ─────────────────────────────────────────────
@@ -43,14 +29,6 @@ import androidx.glance.unit.ColorProvider
 // Displays two states:
 //   Idle   — "NEUROLOAD" label + "Start Session" button + last session line
 //   Active — large elapsed timer + category + "Distracted" button
-//
-// State is stored in GlanceState (Preferences DataStore) and pushed from
-// Flutter via MethodChannel → MainActivity.kt → updateAppWidgetState().
-//
-// The Distracted button fires WidgetDistractionCallback which broadcasts
-// to the running Flutter isolate the same way as the notification action.
-
-// ── State keys ────────────────────────────────────────────────────────────────
 
 object WidgetKeys {
     val SESSION_ACTIVE      = booleanPreferencesKey("session_active")
@@ -62,13 +40,14 @@ object WidgetKeys {
     val LAST_SESSION_CAT    = stringPreferencesKey("last_session_category")
 }
 
-// ── GlanceAppWidget ───────────────────────────────────────────────────────────
-
 class NeuroLoadWidget : GlanceAppWidget() {
 
+    override val stateDefinition: GlanceStateDefinition<Preferences> = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val prefs = GlanceState.getValue(context, PreferencesGlanceStateDefinition, id.toString())
+
         provideContent {
-            val prefs = currentState<Preferences>()
             val isActive       = prefs[WidgetKeys.SESSION_ACTIVE]    ?: false
             val elapsedSecs    = prefs[WidgetKeys.ELAPSED_SECONDS]   ?: 0
             val category       = prefs[WidgetKeys.CATEGORY]          ?: ""
@@ -78,19 +57,17 @@ class NeuroLoadWidget : GlanceAppWidget() {
             val lastCat        = prefs[WidgetKeys.LAST_SESSION_CAT]
 
             NeuroLoadWidgetContent(
-                isActive     = isActive,
-                elapsedSecs  = elapsedSecs,
-                category     = category,
-                subCategory  = subCategory,
-                lapCount     = lapCount,
-                lastMins     = lastMins,
-                lastCat      = lastCat,
+                isActive,
+                elapsedSecs,
+                category,
+                subCategory,
+                lapCount,
+                lastMins,
+                lastCat,
             )
         }
     }
 }
-
-// ── Widget UI ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun NeuroLoadWidgetContent(
@@ -111,40 +88,36 @@ private fun NeuroLoadWidgetContent(
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(bgColor, bgColor))
+            .background(bgColor, bgColor)
             .appWidgetBackground()
             .padding(16.dp),
         contentAlignment = Alignment.TopStart,
     ) {
         if (isActive) {
-            // ── Active state ──────────────────────────────────────────────
             Column(modifier = GlanceModifier.fillMaxSize()) {
-                // Category label
                 if (category.isNotEmpty()) {
                     Text(
                         text = category.uppercase(),
                         style = TextStyle(
-                            color = ColorProvider(teal, teal),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
+                            color = ColorProvider(teal),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
-                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    Spacer(modifier = GlanceModifier.size(4.dp))
                 }
 
-                // Sub-category
                 if (subCategory.isNotEmpty()) {
                     Text(
                         text = subCategory,
                         style = TextStyle(
-                            color = ColorProvider(grey, grey),
+                            color = ColorProvider(grey),
                             fontSize = 11.sp,
                         ),
                     )
-                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    Spacer(modifier = GlanceModifier.size(4.dp))
                 }
 
-                // Large elapsed timer — focal point
                 val h = elapsedSecs / 3600
                 val m = (elapsedSecs % 3600) / 60
                 val s = elapsedSecs % 60
@@ -156,7 +129,7 @@ private fun NeuroLoadWidgetContent(
                 Text(
                     text = timeStr,
                     style = TextStyle(
-                        color = ColorProvider(white, white),
+                        color = ColorProvider(white),
                         fontSize = 38.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -164,7 +137,6 @@ private fun NeuroLoadWidgetContent(
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // Bottom row: lap count + distracted button
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -173,16 +145,15 @@ private fun NeuroLoadWidgetContent(
                         Text(
                             text = "$lapCount lap${if (lapCount != 1) "s" else ""}",
                             style = TextStyle(
-                                color = ColorProvider(grey, grey),
+                                color = ColorProvider(grey),
                                 fontSize = 11.sp,
                             ),
                         )
                     }
                     Spacer(modifier = GlanceModifier.defaultWeight())
-                    // Distracted button — fix #1: clickable as GlanceModifier, not Text modifier
                     Box(
                         modifier = GlanceModifier
-                            .background(ColorProvider(Color(0xFF1E1E1E), Color(0xFF1E1E1E)))
+                            .background(Color(0xFF1E1E1E), Color(0xFF1E1E1E))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                             .clickable(actionRunCallback<WidgetDistractionCallback>()),
                         contentAlignment = Alignment.Center,
@@ -190,7 +161,7 @@ private fun NeuroLoadWidgetContent(
                         Text(
                             text = "Distracted",
                             style = TextStyle(
-                                color = ColorProvider(grey, grey),
+                                color = ColorProvider(grey),
                                 fontSize = 11.sp,
                             ),
                         )
@@ -198,13 +169,11 @@ private fun NeuroLoadWidgetContent(
                 }
             }
         } else {
-            // ── Idle state ────────────────────────────────────────────────
             Column(modifier = GlanceModifier.fillMaxSize()) {
-                // App name
                 Text(
                     text = "NEUROLOAD",
                     style = TextStyle(
-                        color = ColorProvider(teal, teal),
+                        color = ColorProvider(teal),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                     ),
@@ -212,11 +181,10 @@ private fun NeuroLoadWidgetContent(
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // Start session CTA — fix #2: actionStartActivity<T>() instead of Intent overload
                 Box(
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .background(ColorProvider(teal, teal))
+                        .background(teal, teal)
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                         .clickable(actionStartActivity<MainActivity>()),
                     contentAlignment = Alignment.Center,
@@ -224,16 +192,57 @@ private fun NeuroLoadWidgetContent(
                     Text(
                         text = "Start Session",
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFF0A0A0A), Color(0xFF0A0A0A)),
+                            color = ColorProvider(Color(0xFF0A0A0A)),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                         ),
                     )
                 }
 
-                Spacer(modifier = GlanceModifier.height(8.dp))
+                Spacer(modifier = GlanceModifier.size(8.dp))
 
-                // Last session line (if available)
+                if (lastCat == null) {
+                    Text(
+                        text = "NO PREVIOUS SESSION",
+                        style = TextStyle(
+                            color = ColorProvider(dimGrey),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                } else {
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = GlanceModifier
+                                .width(4.dp)
+                                .fillMaxHeight()
+                                .background(teal, teal)
+                        ) {}
+                        Spacer(modifier = GlanceModifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "LAST SESSION",
+                                style = TextStyle(
+                                    color = ColorProvider(teal),
+                                    fontSize = 10.sp
+                                )
+                            )
+                            Text(
+                                text = lastCat.uppercase(),
+                                style = TextStyle(
+                                    color = ColorProvider(white),
+                                    fontSize = 14.sp
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = GlanceModifier.size(8.dp))
+
                 val subtitle = when {
                     lastMins != null && lastCat != null ->
                         "Last · ${lastMins}min · $lastCat"
@@ -245,7 +254,7 @@ private fun NeuroLoadWidgetContent(
                 Text(
                     text = subtitle,
                     style = TextStyle(
-                        color = ColorProvider(dimGrey, dimGrey),
+                        color = ColorProvider(dimGrey),
                         fontSize = 10.sp,
                     ),
                 )
@@ -253,10 +262,6 @@ private fun NeuroLoadWidgetContent(
         }
     }
 }
-
-// ── Widget Receiver ───────────────────────────────────────────────────────────
-// Fix #3: @GlanceAppWidgetReceiver is not a valid annotation in Glance 1.1.0.
-// The receiver is registered in AndroidManifest.xml instead.
 
 class NeuroLoadWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = NeuroLoadWidget()

@@ -3,6 +3,18 @@ allprojects {
         google()
         mavenCentral()
     }
+    configurations.all {
+        resolutionStrategy {
+            eachDependency {
+                if (requested.group == "androidx.glance") {
+                    useVersion("1.0.0")
+                }
+                if (requested.group == "androidx.datastore") {
+                    useVersion("1.0.0")
+                }
+            }
+        }
+    }
 }
 
 val newBuildDir: Directory =

@@ -8,6 +8,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Resolution strategy moved to root build.gradle.kts
+
 // ── Load key.properties (written by CI or developer locally) ────────────────
 val keyPropertiesFile = rootProject.file("key.properties")
 val keyProperties = Properties()
@@ -67,4 +69,5 @@ dependencies {
 
     // Coroutines (already implied by Glance, explicit for clarity)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 }
