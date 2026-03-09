@@ -86,6 +86,13 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
 
+                    "getLocalTimezone" -> {
+                        // Return the device's IANA timezone ID (e.g. "Europe/Istanbul").
+                        // Uses the standard Java TimeZone API — no third-party plugin needed.
+                        val tz = java.util.TimeZone.getDefault().id
+                        result.success(tz)
+                    }
+
                     else -> result.notImplemented()
                 }
             }

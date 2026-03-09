@@ -50,7 +50,9 @@ dependencies:
   share_plus: ^10.0.2
 
   # Timezone support (for scheduled daily notifications)
-  flutter_timezone: ^2.0.0
+  # flutter_timezone and flutter_native_timezone both have broken Android plugins
+  # (v1 Registrar reference / missing namespace). Timezone is resolved natively
+  # via a MethodChannel in MainActivity.kt — no third-party plugin needed.
   timezone: ^0.9.4
 
   # HTTP client (for Supabase REST upsert)

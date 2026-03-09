@@ -2,7 +2,6 @@ package com.neuroload.neuro_load
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -13,8 +12,13 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.*
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.state.getAppWidgetState
+import androidx.glance.background
 import androidx.glance.layout.*
 import androidx.glance.text.*
 import androidx.glance.state.GlanceStateDefinition
@@ -44,16 +48,21 @@ class NeuroLoadWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<Preferences> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent {
-            val prefs          = currentState<Preferences>()
-            val isActive       = prefs[WidgetKeys.SESSION_ACTIVE]    ?: false
-            val elapsedSecs    = prefs[WidgetKeys.ELAPSED_SECONDS]   ?: 0
-            val category       = prefs[WidgetKeys.CATEGORY]          ?: ""
-            val subCategory    = prefs[WidgetKeys.SUB_CATEGORY]      ?: ""
-            val lapCount       = prefs[WidgetKeys.LAP_COUNT]         ?: 0
-            val lastMins       = prefs[WidgetKeys.LAST_SESSION_MINS]
-            val lastCat        = prefs[WidgetKeys.LAST_SESSION_CAT]
+        // Read state BEFORE entering provideContent using the stable
+        // getAppWidgetState API. This avoids currentState<T>() which is
+        // an inline function whose resolution is sensitive to the Kotlin
+        // compiler version / Glance version pairing.
+        val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
 
+        val isActive    = prefs[WidgetKeys.SESSION_ACTIVE]  ?: false
+        val elapsedSecs = prefs[WidgetKeys.ELAPSED_SECONDS] ?: 0
+        val category    = prefs[WidgetKeys.CATEGORY]        ?: ""
+        val subCategory = prefs[WidgetKeys.SUB_CATEGORY]    ?: ""
+        val lapCount    = prefs[WidgetKeys.LAP_COUNT]       ?: 0
+        val lastMins    = prefs[WidgetKeys.LAST_SESSION_MINS]
+        val lastCat     = prefs[WidgetKeys.LAST_SESSION_CAT]
+
+        provideContent {
             NeuroLoadWidgetContent(
                 isActive,
                 elapsedSecs,
@@ -77,16 +86,18 @@ private fun NeuroLoadWidgetContent(
     lastMins: Int?,
     lastCat: String?,
 ) {
-    val bgColor = Color(0xFF0A0A0A)
-    val teal    = Color(0xFF00B5A5)
-    val grey    = Color(0xFF888888)
-    val dimGrey = Color(0xFF505050)
-    val white   = Color(0xFFE8E8E8)
+    val bgColor = ColorProvider(android.graphics.Color.parseColor("#0A0A0A"))
+    val teal    = ColorProvider(android.graphics.Color.parseColor("#00B5A5"))
+    val grey    = ColorProvider(android.graphics.Color.parseColor("#888888"))
+    val dimGrey = ColorProvider(android.graphics.Color.parseColor("#505050"))
+    val white   = ColorProvider(android.graphics.Color.parseColor("#E8E8E8"))
+    val darkCard = ColorProvider(android.graphics.Color.parseColor("#1E1E1E"))
+    val black   = ColorProvider(android.graphics.Color.parseColor("#0A0A0A"))
 
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(bgColor, bgColor)
+            .background(bgColor)
             .appWidgetBackground()
             .padding(16.dp),
         contentAlignment = Alignment.TopStart,
@@ -97,7 +108,7 @@ private fun NeuroLoadWidgetContent(
                     Text(
                         text = category.uppercase(),
                         style = TextStyle(
-                            color = ColorProvider(teal),
+                            color = teal,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -109,7 +120,7 @@ private fun NeuroLoadWidgetContent(
                     Text(
                         text = subCategory,
                         style = TextStyle(
-                            color = ColorProvider(grey),
+                            color = grey,
                             fontSize = 11.sp,
                         ),
                     )
@@ -127,7 +138,7 @@ private fun NeuroLoadWidgetContent(
                 Text(
                     text = timeStr,
                     style = TextStyle(
-                        color = ColorProvider(white),
+                        color = white,
                         fontSize = 38.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -143,7 +154,7 @@ private fun NeuroLoadWidgetContent(
                         Text(
                             text = "$lapCount lap${if (lapCount != 1) "s" else ""}",
                             style = TextStyle(
-                                color = ColorProvider(grey),
+                                color = grey,
                                 fontSize = 11.sp,
                             ),
                         )
@@ -151,7 +162,7 @@ private fun NeuroLoadWidgetContent(
                     Spacer(modifier = GlanceModifier.defaultWeight())
                     Box(
                         modifier = GlanceModifier
-                            .background(Color(0xFF1E1E1E), Color(0xFF1E1E1E))
+                            .background(darkCard)
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                             .clickable(actionRunCallback<WidgetDistractionCallback>()),
                         contentAlignment = Alignment.Center,
@@ -159,7 +170,7 @@ private fun NeuroLoadWidgetContent(
                         Text(
                             text = "Distracted",
                             style = TextStyle(
-                                color = ColorProvider(grey),
+                                color = grey,
                                 fontSize = 11.sp,
                             ),
                         )
@@ -171,7 +182,7 @@ private fun NeuroLoadWidgetContent(
                 Text(
                     text = "NEUROLOAD",
                     style = TextStyle(
-                        color = ColorProvider(teal),
+                        color = teal,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                     ),
@@ -182,7 +193,7 @@ private fun NeuroLoadWidgetContent(
                 Box(
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .background(teal, teal)
+                        .background(teal)
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                         .clickable(actionStartActivity<MainActivity>()),
                     contentAlignment = Alignment.Center,
@@ -190,7 +201,7 @@ private fun NeuroLoadWidgetContent(
                     Text(
                         text = "Start Session",
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFF0A0A0A)),
+                            color = black,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                         ),
@@ -203,7 +214,7 @@ private fun NeuroLoadWidgetContent(
                     Text(
                         text = "NO PREVIOUS SESSION",
                         style = TextStyle(
-                            color = ColorProvider(dimGrey),
+                            color = dimGrey,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -217,21 +228,21 @@ private fun NeuroLoadWidgetContent(
                             modifier = GlanceModifier
                                 .width(4.dp)
                                 .fillMaxHeight()
-                                .background(teal, teal)
+                                .background(teal)
                         ) {}
                         Spacer(modifier = GlanceModifier.width(8.dp))
                         Column {
                             Text(
                                 text = "LAST SESSION",
                                 style = TextStyle(
-                                    color = ColorProvider(teal),
+                                    color = teal,
                                     fontSize = 10.sp
                                 )
                             )
                             Text(
                                 text = lastCat.uppercase(),
                                 style = TextStyle(
-                                    color = ColorProvider(white),
+                                    color = white,
                                     fontSize = 14.sp
                                 )
                             )
@@ -252,7 +263,7 @@ private fun NeuroLoadWidgetContent(
                 Text(
                     text = subtitle,
                     style = TextStyle(
-                        color = ColorProvider(dimGrey),
+                        color = dimGrey,
                         fontSize = 10.sp,
                     ),
                 )

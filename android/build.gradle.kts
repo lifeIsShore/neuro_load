@@ -3,18 +3,8 @@ allprojects {
         google()
         mavenCentral()
     }
-    configurations.all {
-        resolutionStrategy {
-            eachDependency {
-                if (requested.group == "androidx.glance") {
-                    useVersion("1.0.0")
-                }
-                if (requested.group == "androidx.datastore") {
-                    useVersion("1.0.0")
-                }
-            }
-        }
-    }
+    // Resolution strategy: no version overrides needed.
+    // Glance 1.1.0 + Kotlin 2.1.0 are compatible and self-consistent.
 }
 
 val newBuildDir: Directory =

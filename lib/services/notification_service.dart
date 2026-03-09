@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:flutter/services.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 
@@ -32,7 +32,8 @@ class NotificationService {
     tz.initializeTimeZones();
     final String localTz;
     try {
-      localTz = await FlutterTimezone.getLocalTimezone();
+      localTz = await const MethodChannel('neuroload/widget')
+          .invokeMethod<String>('getLocalTimezone') ?? 'UTC';
     } catch (_) {
       // Fallback to UTC if the platform channel fails (rare on emulators).
       tz.setLocalLocation(tz.getLocation('UTC'));
